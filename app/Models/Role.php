@@ -17,6 +17,7 @@ class Role extends Model
 	protected $fillable = [
 		'name',
 		'active',
+		'is_super_admin',
 	];
 
     /**

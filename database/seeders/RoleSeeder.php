@@ -9,6 +9,8 @@ class RoleSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * Creates roles: Developer Account, Web Admin, Senior Team Lead, Team Lead, Service Desk, Employee.
      */
     public function run(): void
     {
@@ -21,15 +23,25 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Web Admin',
                 'active' => true,
-                'is_super_admin' => false,
+                'is_super_admin' => true,
             ],
             [
-                'name' => 'Editor',
+                'name' => 'Senior Team Lead',
                 'active' => true,
                 'is_super_admin' => false,
             ],
             [
-                'name' => 'Viewer',
+                'name' => 'Team Lead',
+                'active' => true,
+                'is_super_admin' => false,
+            ],
+            [
+                'name' => 'Service Desk',
+                'active' => true,
+                'is_super_admin' => false,
+            ],
+            [
+                'name' => 'Requestor',
                 'active' => true,
                 'is_super_admin' => false,
             ],
@@ -41,5 +53,7 @@ class RoleSeeder extends Seeder
                 $role
             );
         }
+
+        $this->command->info('✓ Roles created/updated');
     }
 }
