@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\AuditTrailController;
 use App\Http\Controllers\Api\Support\ServiceTypeController;
 use App\Http\Controllers\Api\Support\TicketStatusController;
 use App\Http\Controllers\Api\Support\SlaController;
+use App\Http\Controllers\Api\Support\TicketRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -139,6 +140,22 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/{id}', [TicketStatusController::class, 'show']);
 		Route::put('/{id}', [TicketStatusController::class, 'update']);
 		Route::delete('/{id}', [TicketStatusController::class, 'destroy']);
+	});
+
+	// Ticket Management - All Tickets (ticket_requests)
+	Route::prefix('ticket-management/all-tickets')->group(function () {
+		Route::get('/', [TicketRequestController::class, 'index']);
+		Route::post('/', [TicketRequestController::class, 'store']);
+		Route::post('/bulk/delete', [TicketRequestController::class, 'bulkDelete']);
+		Route::post('/bulk/restore', [TicketRequestController::class, 'bulkRestore']);
+		Route::post('/bulk/force-delete', [TicketRequestController::class, 'bulkForceDelete']);
+		Route::get('/archived', [TicketRequestController::class, 'getTrashed']);
+		Route::put('/restore/{id}', [TicketRequestController::class, 'restore']);
+		Route::patch('/restore/{id}', [TicketRequestController::class, 'restore']);
+		Route::delete('/force-delete/{id}', [TicketRequestController::class, 'forceDelete']);
+		Route::get('/{id}', [TicketRequestController::class, 'show']);
+		Route::put('/{id}', [TicketRequestController::class, 'update']);
+		Route::delete('/{id}', [TicketRequestController::class, 'destroy']);
 	});
 
 	// Service Catalog - SLA & Timing
