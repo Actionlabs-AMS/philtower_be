@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             LanguageSeeder::class,
             ServiceTypesSeeder::class,
             TicketStatusesSeeder::class,
+            SlasSeeder::class,
         ]);
     }
 }

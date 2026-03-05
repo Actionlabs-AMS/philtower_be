@@ -6,19 +6,23 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Seeds ticket_statuses (Ticket Statuses, renamed from Parent Ticket Statuses).
+ * Seeds ticket_statuses. Closed states: Cancelled, Closed, Rejected.
  */
 class TicketStatusesSeeder extends Seeder
 {
     public function run(): void
     {
         $statuses = [
-            ['code' => 'open', 'label' => 'Open', 'is_closed' => false, 'is_on_hold' => false],
-            ['code' => 'on_hold_parts', 'label' => 'On Hold (Parts)', 'is_closed' => false, 'is_on_hold' => true],
-            ['code' => 'on_hold_customer', 'label' => 'On Hold (Customer)', 'is_closed' => false, 'is_on_hold' => true],
-            ['code' => 'resolved_incomplete', 'label' => 'Resolved Incomplete', 'is_closed' => false, 'is_on_hold' => false],
-            ['code' => 'closed', 'label' => 'Closed', 'is_closed' => true, 'is_on_hold' => false],
+            ['code' => 'new', 'label' => 'New', 'is_closed' => false, 'is_on_hold' => false],
+            ['code' => 'assigned', 'label' => 'Assigned', 'is_closed' => false, 'is_on_hold' => false],
+            ['code' => 'in_progress', 'label' => 'In Progress', 'is_closed' => false, 'is_on_hold' => false],
+            ['code' => 'pending', 'label' => 'Pending', 'is_closed' => false, 'is_on_hold' => true],
             ['code' => 'cancelled', 'label' => 'Cancelled', 'is_closed' => true, 'is_on_hold' => false],
+            ['code' => 'resolved', 'label' => 'Resolved', 'is_closed' => false, 'is_on_hold' => false],
+            ['code' => 'closed', 'label' => 'Closed', 'is_closed' => true, 'is_on_hold' => false],
+            ['code' => 'for_approval', 'label' => 'For Approval', 'is_closed' => false, 'is_on_hold' => false],
+            ['code' => 'approved', 'label' => 'Approved', 'is_closed' => false, 'is_on_hold' => false],
+            ['code' => 'rejected', 'label' => 'Rejected', 'is_closed' => true, 'is_on_hold' => false],
         ];
 
         foreach ($statuses as $row) {

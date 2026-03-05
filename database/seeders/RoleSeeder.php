@@ -26,17 +26,12 @@ class RoleSeeder extends Seeder
                 'is_super_admin' => true,
             ],
             [
-                'name' => 'Senior Team Lead',
+                'name' => 'Approver',
                 'active' => true,
                 'is_super_admin' => false,
             ],
             [
-                'name' => 'Team Lead',
-                'active' => true,
-                'is_super_admin' => false,
-            ],
-            [
-                'name' => 'Service Desk',
+                'name' => 'Agent',
                 'active' => true,
                 'is_super_admin' => false,
             ],

@@ -9,84 +9,64 @@ class ServiceTypesSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     * Seeds service_types (Service Catalog). No child-ticket-statuses or SLA.
+     * Categories: Incident, Problem, Request, Inquiry.
+     * Subcategories: Incident (Network, Laptop, Printer); Request (Access, Installation, NEO).
      */
     public function run(): void
     {
-        DB::table('service_types')->updateOrInsert(
-            ['code' => 'INQUIRY'],
-            [
-                'name' => 'Inquiry',
-                'code' => 'INQUIRY',
-                'description' => 'General inquiries and information requests',
-                'parent_id' => null,
-                'active' => true,
-                'approval' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
+        $now = now();
 
-        DB::table('service_types')->updateOrInsert(
-            ['code' => 'INCIDENT_REQUEST'],
-            [
-                'name' => 'Incident Request',
-                'code' => 'INCIDENT_REQUEST',
-                'description' => 'Service requests for incidents and issues',
-                'parent_id' => null,
-                'active' => true,
-                'approval' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-        $incidentRequestId = DB::table('service_types')->where('code', 'INCIDENT_REQUEST')->value('id');
-
-        DB::table('service_types')->updateOrInsert(
-            ['code' => 'SERVICE_REQUEST'],
-            [
-                'name' => 'Service Request',
-                'code' => 'SERVICE_REQUEST',
-                'description' => 'Service requests for planned services',
-                'parent_id' => null,
-                'active' => true,
-                'approval' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-        $serviceRequestId = DB::table('service_types')->where('code', 'SERVICE_REQUEST')->value('id');
-
-        $incidentTypes = [
-            ['name' => 'Adhoc', 'code' => 'ADHOC', 'description' => 'On-demand or unscheduled service request', 'parent_id' => $incidentRequestId],
-            ['name' => 'Breakfix', 'code' => 'BREAKFIX', 'description' => 'Corrective repair for unexpected issues', 'parent_id' => $incidentRequestId],
-            ['name' => 'Follow-up', 'code' => 'FOLLOW_UP', 'description' => 'Follow-up service for previous incidents', 'parent_id' => $incidentRequestId],
+        $categories = [
+            ['name' => 'Incident', 'code' => 'INCIDENT', 'description' => 'Incident'],
+            ['name' => 'Problem', 'code' => 'PROBLEM', 'description' => 'Problem'],
+            ['name' => 'Request', 'code' => 'REQUEST', 'description' => 'Request'],
+            ['name' => 'Inquiry', 'code' => 'INQUIRY', 'description' => 'Inquiry'],
         ];
 
-        $serviceTypes = [
-            ['name' => 'Preventive Maintenance', 'code' => 'PREVENTIVE_MAINTENANCE', 'description' => 'Scheduled preventive maintenance service', 'parent_id' => $serviceRequestId],
-            ['name' => 'Training / Shadowing', 'code' => 'TRAINING_SHADOWING', 'description' => 'Training and shadowing services', 'parent_id' => $serviceRequestId],
-            ['name' => 'Installation', 'code' => 'INSTALLATION', 'description' => 'Installation service', 'parent_id' => $serviceRequestId],
-            ['name' => 'Adhoc Reliever', 'code' => 'ADHOC_RELIEVER', 'description' => 'Adhoc service with reliever support', 'parent_id' => $serviceRequestId],
-            ['name' => 'Asset Tagging', 'code' => 'ASSET_TAGGING', 'description' => 'Asset identification and tagging service', 'parent_id' => $serviceRequestId],
-        ];
-
-        foreach (array_merge($incidentTypes, $serviceTypes) as $type) {
+        foreach ($categories as $cat) {
             DB::table('service_types')->updateOrInsert(
-                ['code' => $type['code']],
+                ['code' => $cat['code']],
                 [
-                    'name' => $type['name'],
-                    'code' => $type['code'],
-                    'description' => $type['description'],
-                    'parent_id' => $type['parent_id'],
+                    'name' => $cat['name'],
+                    'code' => $cat['code'],
+                    'description' => $cat['description'],
+                    'parent_id' => null,
                     'active' => true,
                     'approval' => false,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ]
             );
         }
 
-        $this->command->info('ServiceTypesSeeder: Service types created/updated.');
+        $incidentId = DB::table('service_types')->where('code', 'INCIDENT')->value('id');
+        $requestId = DB::table('service_types')->where('code', 'REQUEST')->value('id');
+
+        $subcategories = [
+            ['name' => 'Network', 'code' => 'INCIDENT_NETWORK', 'parent_id' => $incidentId],
+            ['name' => 'Laptop', 'code' => 'INCIDENT_LAPTOP', 'parent_id' => $incidentId],
+            ['name' => 'Printer', 'code' => 'INCIDENT_PRINTER', 'parent_id' => $incidentId],
+            ['name' => 'Access', 'code' => 'REQUEST_ACCESS', 'parent_id' => $requestId],
+            ['name' => 'Installation', 'code' => 'REQUEST_INSTALLATION', 'parent_id' => $requestId],
+            ['name' => 'NEO', 'code' => 'REQUEST_NEO', 'parent_id' => $requestId],
+        ];
+
+        foreach ($subcategories as $sub) {
+            DB::table('service_types')->updateOrInsert(
+                ['code' => $sub['code']],
+                [
+                    'name' => $sub['name'],
+                    'code' => $sub['code'],
+                    'description' => $sub['name'],
+                    'parent_id' => $sub['parent_id'],
+                    'active' => true,
+                    'approval' => false,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+        }
+
+        $this->command->info('ServiceTypesSeeder: Service types (categories and subcategories) created/updated.');
     }
 }

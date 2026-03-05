@@ -104,6 +104,43 @@ class NavigationSeeder extends Seeder
                         'active' => true,
                         'show_in_menu' => true,
                     ],
+                    [
+                        'name' => 'SLA & Timing',
+                        'slug' => 'sla-timing',
+                        'icon' => 'clock',
+                        'description' => 'Manage SLA and timing rules for the catalog',
+                        'active' => true,
+                        'show_in_menu' => true,
+                    ],
+                ],
+            ],
+
+            // Ticket Management
+            [
+                'name' => 'Ticket Management',
+                'slug' => 'ticket-management',
+                'icon' => 'ticket',
+                'description' => 'View and manage tickets',
+                'parent_id' => null,
+                'active' => true,
+                'show_in_menu' => true,
+                'children' => [
+                    [
+                        'name' => 'All Tickets',
+                        'slug' => 'all-tickets',
+                        'icon' => 'clipboard-document-list',
+                        'description' => 'View and manage all tickets',
+                        'active' => true,
+                        'show_in_menu' => true,
+                    ],
+                    [
+                        'name' => 'Tickets for Approval',
+                        'slug' => 'tickets-for-approval',
+                        'icon' => 'clipboard-document-check',
+                        'description' => 'Tickets pending your approval',
+                        'active' => true,
+                        'show_in_menu' => true,
+                    ],
                 ],
             ],
             
