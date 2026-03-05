@@ -27,6 +27,34 @@ class TicketRequestController extends BaseController
         $this->mediaService = $mediaService;
     }
 
+    /**
+     * Upload attachment files to philtower folder (local or S3). Returns attachment_metadata for saving on ticket.
+     * Frontend calls this first with FormData (files only), then includes returned metadata in ticket store/update.
+     */
+    public function uploadAttachments(Request $request)
+    {
+        try {
+            $files = $this->collectUploadedFiles($request);
+            if (empty($files)) {
+                return response()->json(['message' => 'No valid files uploaded.', 'attachment_metadata' => []], 422);
+            }
+            $uploaded = $this->mediaService->uploadFilesReturnAll($files, $request->user(), 'philtower');
+            $attachment_metadata = array_map(function ($m) {
+                return [
+                    'name' => $m['file_name'] ?? 'file',
+                    'size' => (int) ($m['file_size'] ?? 0),
+                    'type' => $m['file_type'] ?? '',
+                    'file_url' => $m['file_url'] ?? null,
+                    'thumbnail_url' => $m['thumbnail_url'] ?? $m['file_url'] ?? null,
+                    'media_id' => $m['id'] ?? null,
+                ];
+            }, $uploaded);
+            return response()->json(['attachment_metadata' => $attachment_metadata], 200);
+        } catch (\Exception $e) {
+            return $this->messageService->responseError($e);
+        }
+    }
+
     public function index()
     {
         try {
@@ -71,64 +99,50 @@ class TicketRequestController extends BaseController
     }
 
     /**
-     * Merge validated data with uploaded attachments (MediaService).
-     * Supports multipart: attachment_metadata may be JSON string; new files in attachments[].
+     * Normalize request data for store/update. attachment_metadata is sent as JSON from frontend
+     * (after uploading files via POST upload-attachments).
      */
     protected function normalizeTicketRequestData(StoreTicketRequestRequest|UpdateTicketRequestRequest $request): array
     {
         $data = $request->validated();
 
-        // Get attachment_metadata from validated() or raw input (multipart can omit from validated in some setups)
         $meta = $data['attachment_metadata'] ?? $request->input('attachment_metadata');
         if (is_string($meta)) {
             $decoded = json_decode($meta, true);
-            $data['attachment_metadata'] = is_array($decoded) ? $decoded : [];
+            $data['attachment_metadata'] = is_array($decoded) ? $decoded : null;
         }
-        $existingMeta = is_array($data['attachment_metadata'] ?? null) ? $data['attachment_metadata'] : [];
-
-        // Get uploaded files: PHP parses "attachments[]" as key "attachments" with array value
-        $files = $request->file('attachments');
-        if (empty($files) && $request->hasFile('attachments[]')) {
-            $files = $request->file('attachments[]');
+        if (isset($data['attachment_metadata']) && is_array($data['attachment_metadata']) && empty($data['attachment_metadata'])) {
+            $data['attachment_metadata'] = null;
         }
-        if (empty($files)) {
-            $allFiles = $request->allFiles();
-            foreach (['attachments', 'attachments[]'] as $key) {
-                if (!empty($allFiles[$key])) {
-                    $files = is_array($allFiles[$key]) ? $allFiles[$key] : [$allFiles[$key]];
-                    break;
-                }
-            }
-        }
-        if (!empty($files) && !is_array($files)) {
-            $files = [$files];
-        }
-        if (!empty($files)) {
-            $files = is_array($files) ? array_values($files) : [$files];
-            $files = array_filter($files, fn ($f) => $f && (is_object($f) && method_exists($f, 'isValid') ? $f->isValid() : true));
-            if (!empty($files)) {
-                $uploaded = $this->mediaService->uploadFilesReturnAll($files, $request->user(), 'philtower');
-                $newMeta = array_map(function ($m) {
-                    return [
-                        'name' => $m['file_name'] ?? 'file',
-                        'size' => (int) ($m['file_size'] ?? 0),
-                        'type' => $m['file_type'] ?? '',
-                        'file_url' => $m['file_url'] ?? null,
-                        'thumbnail_url' => $m['thumbnail_url'] ?? $m['file_url'] ?? null,
-                        'media_id' => $m['id'] ?? null,
-                    ];
-                }, $uploaded);
-                $data['attachment_metadata'] = array_merge($existingMeta, $newMeta);
-            } else {
-                $data['attachment_metadata'] = !empty($existingMeta) ? $existingMeta : null;
-            }
-        } else {
-            $data['attachment_metadata'] = !empty($existingMeta) ? $existingMeta : null;
-        }
-
         unset($data['attachments']);
 
         return $data;
+    }
+
+    /**
+     * Collect every uploaded file from the request regardless of form field name.
+     * Handles attachments, attachments[], or any other key that contains UploadedFile(s).
+     *
+     * @param  Request|StoreTicketRequestRequest|UpdateTicketRequestRequest  $request
+     * @return array<int, \Illuminate\Http\UploadedFile>
+     */
+    protected function collectUploadedFiles($request): array
+    {
+        $collected = [];
+        foreach ($request->allFiles() as $key => $value) {
+            if ($value instanceof \Illuminate\Http\UploadedFile) {
+                if ($value->isValid()) {
+                    $collected[] = $value;
+                }
+            } elseif (is_array($value)) {
+                foreach ($value as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile && $file->isValid()) {
+                        $collected[] = $file;
+                    }
+                }
+            }
+        }
+        return $collected;
     }
 
     public function destroy($id)

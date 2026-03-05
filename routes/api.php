@@ -144,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 	// Ticket Management - All Tickets (ticket_requests)
 	Route::prefix('ticket-management/all-tickets')->group(function () {
+		Route::post('/upload-attachments', [TicketRequestController::class, 'uploadAttachments']);
 		Route::get('/', [TicketRequestController::class, 'index']);
 		Route::post('/', [TicketRequestController::class, 'store']);
 		Route::post('/bulk/delete', [TicketRequestController::class, 'bulkDelete']);

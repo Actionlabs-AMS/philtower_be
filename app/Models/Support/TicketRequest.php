@@ -44,6 +44,14 @@ class TicketRequest extends Model
     public const FOR_APPROVAL_NO = 2;
     public const FOR_APPROVAL_AUTO = 3;
 
+    /**
+     * Human-readable created_at (e.g. "Mar 6, 2026 12:57 PM").
+     */
+    public function getCreatedAtHumanAttribute(): ?string
+    {
+        return $this->created_at?->format('M j, Y g:i A');
+    }
+
     protected static function boot()
     {
         parent::boot();

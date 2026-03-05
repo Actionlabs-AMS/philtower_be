@@ -33,6 +33,7 @@ class TicketRequestResource extends JsonResource
             'resolved_at' => $this->resolved_at?->toIso8601String(),
             'closed_at' => $this->closed_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
+            'created_at_human' => $this->created_at_human,
             'updated_at' => $this->updated_at?->toIso8601String(),
             'deleted_at' => $this->deleted_at?->toIso8601String(),
             // Flat labels for list/table (when relations loaded)

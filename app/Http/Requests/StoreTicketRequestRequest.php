@@ -33,8 +33,7 @@ class StoreTicketRequestRequest extends FormRequest
             'service_type_id' => ['nullable', 'integer', 'exists:service_types,id'],
             'description' => ['nullable', 'string'],
             'attachment_metadata' => ['nullable'],
-            'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:51200'], // 50MB per file
+            // Files are handled in controller; no validation here so multipart always passes
             'contact_number' => ['nullable', 'string', 'max:50'],
             'contact_name' => ['nullable', 'string', 'max:100'],
             'contact_email' => ['nullable', 'email', 'max:100'],
