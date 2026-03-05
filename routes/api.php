@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\UserReportsController;
 use App\Http\Controllers\Api\ContentReportsController;
 use App\Http\Controllers\Api\AuditTrailController;
+use App\Http\Controllers\Api\Support\ServiceTypeController;
+use App\Http\Controllers\Api\Support\TicketStatusController;
 
 /*
 |--------------------------------------------------------------------------
@@ -105,6 +107,37 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/routes', [NavigationController::class, 'getRoutes']);  // Retrieve all routes
 		Route::get('/roles', [RoleController::class, 'getRoles']);  // Retrieve all roles
 		Route::get('/languages', [TranslationController::class, 'getLanguages']);
+		Route::get('/service-types', [ServiceTypeController::class, 'getServiceTypes']);
+		Route::get('/service-types/request-types', [ServiceTypeController::class, 'getRequestTypes']);
+	});
+
+	// Service Catalog - Service Types
+	Route::prefix('service-catalog/service-types')->group(function () {
+		Route::get('/', [ServiceTypeController::class, 'index']);
+		Route::post('/', [ServiceTypeController::class, 'store']);
+		Route::get('/archived', [ServiceTypeController::class, 'getTrashed']);
+		Route::put('/restore/{id}', [ServiceTypeController::class, 'restore']);
+		Route::patch('/restore/{id}', [ServiceTypeController::class, 'restore']);
+		Route::delete('/force-delete/{id}', [ServiceTypeController::class, 'forceDelete']);
+		Route::get('/{id}', [ServiceTypeController::class, 'show']);
+		Route::put('/{id}', [ServiceTypeController::class, 'update']);
+		Route::delete('/{id}', [ServiceTypeController::class, 'destroy']);
+	});
+
+	// Service Catalog - Ticket Statuses (renamed from Parent Ticket Statuses)
+	Route::prefix('service-catalog/ticket-statuses')->group(function () {
+		Route::get('/', [TicketStatusController::class, 'index']);
+		Route::post('/', [TicketStatusController::class, 'store']);
+		Route::post('/bulk/delete', [TicketStatusController::class, 'bulkDelete']);
+		Route::post('/bulk/restore', [TicketStatusController::class, 'bulkRestore']);
+		Route::post('/bulk/force-delete', [TicketStatusController::class, 'bulkForceDelete']);
+		Route::get('/archived', [TicketStatusController::class, 'getTrashed']);
+		Route::put('/restore/{id}', [TicketStatusController::class, 'restore']);
+		Route::patch('/restore/{id}', [TicketStatusController::class, 'restore']);
+		Route::delete('/force-delete/{id}', [TicketStatusController::class, 'forceDelete']);
+		Route::get('/{id}', [TicketStatusController::class, 'show']);
+		Route::put('/{id}', [TicketStatusController::class, 'update']);
+		Route::delete('/{id}', [TicketStatusController::class, 'destroy']);
 	});
 
 	/*

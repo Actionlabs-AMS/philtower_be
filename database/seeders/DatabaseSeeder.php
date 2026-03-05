@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             TagSeeder::class,
             OptionSeeder::class,
             LanguageSeeder::class,
+            ServiceTypesSeeder::class,
+            TicketStatusesSeeder::class,
         ]);
     }
 }

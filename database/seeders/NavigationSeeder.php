@@ -78,12 +78,12 @@ class NavigationSeeder extends Seeder
                 ],
             ],
             
-            // Content Management Section
+            // Service Catalog Section (no child-ticket-statuses / child SLA)
             [
-                'name' => 'Content Management',
-                'slug' => 'content-management',
-                'icon' => 'document-text',
-                'description' => 'Create, edit, and organize content including posts, pages, media, and taxonomies',
+                'name' => 'Service Catalog',
+                'slug' => 'service-catalog',
+                'icon' => 'list-bullet',
+                'description' => 'Manage service types and categories for the catalog',
                 'parent_id' => null,
                 'active' => true,
                 'show_in_menu' => true,
@@ -91,8 +91,16 @@ class NavigationSeeder extends Seeder
                     [
                         'name' => 'Service Types',
                         'slug' => 'service-types',
-                        'icon' => 'list-bullet',
-                        'description' => 'Manage service types for better structure',
+                        'icon' => 'cube',
+                        'description' => 'Manage service types and categories for the catalog',
+                        'active' => true,
+                        'show_in_menu' => true,
+                    ],
+                    [
+                        'name' => 'Ticket Statuses',
+                        'slug' => 'ticket-statuses',
+                        'icon' => 'check-circle',
+                        'description' => 'Manage ticket statuses for the catalog',
                         'active' => true,
                         'show_in_menu' => true,
                     ],
