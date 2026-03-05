@@ -11,6 +11,20 @@ class UpdateTicketRequestRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $nullableKeys = ['user_id', 'parent_ticket_id', 'service_type_id', 'ticket_status_id', 'slas_id', 'assigned_to'];
+        $merge = [];
+        foreach ($nullableKeys as $key) {
+            if ($this->has($key) && $this->input($key) === '') {
+                $merge[$key] = null;
+            }
+        }
+        if ($merge !== []) {
+            $this->merge($merge);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -18,7 +32,9 @@ class UpdateTicketRequestRequest extends FormRequest
             'parent_ticket_id' => ['nullable', 'integer'],
             'service_type_id' => ['nullable', 'integer', 'exists:service_types,id'],
             'description' => ['nullable', 'string'],
-            'attachment_metadata' => ['nullable', 'array'],
+            'attachment_metadata' => ['nullable'],
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'max:51200'],
             'contact_number' => ['nullable', 'string', 'max:50'],
             'contact_name' => ['nullable', 'string', 'max:100'],
             'contact_email' => ['nullable', 'email', 'max:100'],

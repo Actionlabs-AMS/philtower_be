@@ -103,25 +103,84 @@ class MediaService extends BaseService
     return new MediaResource(end($uploadedMedia));
   }
 
-  public function getStoragePath() 
+  /**
+   * Upload files and return all uploaded media (e.g. for ticket request attachments).
+   * Returns array of attachment metadata: id, file_url, thumbnail_url, file_name, file_size, file_type.
+   *
+   * @param  array<int, \Illuminate\Http\UploadedFile>  $files
+   * @param  string|null  $subFolder  Optional subfolder (e.g. "philtower") for local and S3 paths.
+   * @return array<int, array{id: int, file_url: string|null, thumbnail_url: string|null, file_name: string, file_size: int, file_type: string}>
+   */
+  public function uploadFilesReturnAll(array $files, User $user, ?string $subFolder = null): array
+  {
+    $uploadedMedia = [];
+    $files = is_array($files) ? $files : [$files];
+
+    foreach ($files as $file) {
+      try {
+        if (!$file || !$file->isValid()) {
+          continue;
+        }
+        $mime_type = explode("/", $file->getClientMimeType());
+        $mediaType = $mime_type[0] ?? 'application';
+
+        if ($this->useS3) {
+          $data = $this->saveToS3($file, $user->id, $mediaType, $subFolder);
+        } else {
+          switch ($mediaType) {
+            case 'image':
+              $data = $this->saveImage($file, $user->id, $subFolder);
+              break;
+            case 'video':
+              $data = $this->saveVideo($file, $user->id, $subFolder);
+              break;
+            default:
+              $data = $this->saveFile($file, $user->id, $subFolder);
+          }
+        }
+        $media = MediaLibrary::create($data);
+        $uploadedMedia[] = [
+          'id' => $media->id,
+          'file_url' => $media->file_url,
+          'thumbnail_url' => $media->thumbnail_url ?? $media->file_url,
+          'file_name' => $media->file_name,
+          'file_size' => (int) $media->file_size,
+          'file_type' => $media->file_type ?? '',
+        ];
+      } catch (\Exception $e) {
+        \Log::error('Media upload error: ' . $e->getMessage());
+        continue;
+      }
+    }
+    return $uploadedMedia;
+  }
+
+  /**
+   * @param  string|null  $subFolder  Optional subfolder (e.g. "philtower") under year/month.
+   */
+  public function getStoragePath(?string $subFolder = null) 
 	{
 		$yr = date('Y');
 		$mon = date('m');
-		$path = Storage::disk('public')->path($yr.'/'.$mon);
-		if(!Storage::exists($path)) {
-			Storage::disk('public')->makeDirectory($yr.'/'.$mon);
+		$relative = $yr.'/'.$mon;
+		if ($subFolder) {
+			$relative .= '/'.trim($subFolder, '/');
+		}
+		$path = Storage::disk('public')->path($relative);
+		if (!Storage::disk('public')->exists($relative)) {
+			Storage::disk('public')->makeDirectory($relative);
 		}
 
 		return [
 			'storage_path' => $path,
-			'public_path' => 'storage/'.$yr.'/'.$mon
+			'public_path' => 'storage/'.$relative
 		];
 	}
 
-	public function saveImage($file, $id) 
+	public function saveImage($file, $id, ?string $subFolder = null) 
 	{
 		$timestamp = time();
-		$path = $this->getStoragePath();
+		$path = $this->getStoragePath($subFolder);
 
 		$filename =  $file->getClientOriginalName();
 		$file_type = $file->getClientMimeType();
@@ -151,10 +210,10 @@ class MediaService extends BaseService
 		return $data;
 	}
 
-	public function saveVideo($file, $id) 
+	public function saveVideo($file, $id, ?string $subFolder = null) 
 	{
 		$timestamp = time();
-		$path = $this->getStoragePath();
+		$path = $this->getStoragePath($subFolder);
 
 		$filename =  $file->getClientOriginalName();
 		$video_filename = pathinfo($filename, PATHINFO_FILENAME);
@@ -192,10 +251,10 @@ class MediaService extends BaseService
 		return $data;
 	}
 
-	public function saveFile($file, $id) 
+	public function saveFile($file, $id, ?string $subFolder = null) 
 	{
 		$timestamp = time();
-		$path = $this->getStoragePath();
+		$path = $this->getStoragePath($subFolder);
 
 		$filename =  $file->getClientOriginalName();
 		$file_type = $file->getClientMimeType();
@@ -234,9 +293,12 @@ class MediaService extends BaseService
 		return $data;
 	}
 
-	protected function saveToS3($file, $userId, $type)
+	protected function saveToS3($file, $userId, $type, ?string $subFolder = null)
   {
     $folder = config('app.name', 'BASE-CODE-PROJECT');
+    if ($subFolder) {
+      $folder = $folder . '/' . trim($subFolder, '/');
+    }
     $filename = $file->getClientOriginalName();
     $file_type = $file->getClientMimeType();
     $file_size = $file->getSize();
