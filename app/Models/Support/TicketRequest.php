@@ -95,4 +95,12 @@ class TicketRequest extends Model
     {
         return $this->belongsTo(\App\Models\User::class, 'assigned_to');
     }
+
+    /**
+     * SLA clocks for this ticket request (entity_type = ticket_request, entity_id = id).
+     */
+    public function slaClocks()
+    {
+        return $this->hasMany(SlaClock::class, 'entity_id')->where('entity_type', 'ticket_request');
+    }
 }

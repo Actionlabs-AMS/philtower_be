@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
             TicketStatusesSeeder::class,
             SlasSeeder::class,
             TicketRequestSeeder::class,
+            SlaClockSeeder::class,
+            TicketUpdateSeeder::class,
         ]);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Services\DashboardService;
 use App\Services\MessageService;
 use App\Services\WidgetDataService;
+use App\Services\Support\DashboardService as SupportDashboardService;
 use App\Models\DashboardWidget;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -231,6 +232,32 @@ class DashboardController extends BaseController
 	{
 		try {
 			$data = $this->service->getPagesByStatus();
+
+			return response()->json([
+				'success' => true,
+				'data' => $data,
+			], 200);
+		} catch (\Exception $e) {
+			return $this->messageService->responseError();
+		}
+	}
+
+	/**
+	 * Get ticket/support dashboard statistics (helpdesk-style KPIs, workflow, trends, agents).
+	 *
+	 * @OA\Get(
+	 *     path="/api/dashboard/ticket-stats",
+	 *     summary="Get ticket dashboard statistics",
+	 *     tags={"Dashboard"},
+	 *     security={{"sanctum": {}}},
+	 *     @OA\Response(response=200, description="Ticket stats retrieved successfully"),
+	 *     @OA\Response(response=401, description="Unauthenticated")
+	 * )
+	 */
+	public function getTicketStats(SupportDashboardService $supportDashboard): JsonResponse
+	{
+		try {
+			$data = $supportDashboard->getTicketStats();
 
 			return response()->json([
 				'success' => true,

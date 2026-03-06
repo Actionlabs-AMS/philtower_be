@@ -54,12 +54,14 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/widgets/{id}/data', [DashboardController::class, 'getWidgetData']);
 		Route::get('/user-registration-trend', [DashboardController::class, 'getUserRegistrationTrend']);
 		Route::get('/pages-by-status', [DashboardController::class, 'getPagesByStatus']);
+		Route::get('/ticket-stats', [DashboardController::class, 'getTicketStats']);
 	});
 
 	// Analytics & Reports Routes
 	Route::prefix('analytics')->group(function () {
 		// Analytics Overview
 		Route::get('/overview', [AnalyticsController::class, 'getOverview']);
+		Route::get('/tickets-overview', [AnalyticsController::class, 'getTicketsOverview']);
 
 		// User Reports
 		Route::prefix('user-reports')->group(function () {
