@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             ServiceTypesSeeder::class,
             TicketStatusesSeeder::class,
             SlasSeeder::class,
+            TicketRequestSeeder::class,
         ]);
     }
 }

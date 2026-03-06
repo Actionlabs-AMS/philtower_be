@@ -2,9 +2,12 @@
 
 namespace App\Services\Support;
 
+use App\Helpers\SlaHelper;
 use App\Http\Resources\TicketRequestResource;
 use App\Models\Support\ServiceType;
 use App\Models\Support\TicketRequest;
+use App\Models\Support\TicketStatus;
+use App\Models\Support\TicketUpdate;
 use App\Services\BaseService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -21,7 +24,7 @@ class TicketRequestService extends BaseService
 
     /**
      * Set for_approval from selected service type: 1=yes, 2=no, 3=auto.
-     * If service_type_id is set, use service type's approval flag; otherwise keep request value or 3.
+     * If for_approval is YES, set ticket_status_id to the "for_approval" status.
      */
     protected function applyForApprovalFromServiceType(array $data): array
     {
@@ -31,6 +34,12 @@ class TicketRequestService extends BaseService
             if ($serviceType) {
                 $approval = $serviceType->approval;
                 $data['for_approval'] = ($approval === true || $approval === 1) ? self::FOR_APPROVAL_YES : self::FOR_APPROVAL_NO;
+                if ($data['for_approval'] === self::FOR_APPROVAL_YES) {
+                    $forApprovalStatus = TicketStatus::where('code', 'for_approval')->first();
+                    if ($forApprovalStatus) {
+                        $data['ticket_status_id'] = $forApprovalStatus->id;
+                    }
+                }
             }
         } else {
             $data['for_approval'] = $data['for_approval'] ?? self::FOR_APPROVAL_AUTO;
@@ -90,7 +99,27 @@ class TicketRequestService extends BaseService
     {
         $data = $this->applyForApprovalFromServiceType($data);
         $data = $this->normalizeAttachmentMetadata($data);
-        return parent::update($data, $id);
+
+        $model = TicketRequest::with('ticketStatus')->findOrFail($id);
+        $oldStatusId = $model->ticket_status_id;
+        $oldLabel = $model->ticketStatus?->label ?? 'Unknown';
+
+        $out = parent::update($data, $id);
+        $model->refresh()->load(['ticketStatus']);
+        $newStatusId = $model->ticket_status_id;
+
+        if (array_key_exists('ticket_status_id', $data) && (int) $oldStatusId !== (int) $newStatusId) {
+            $newLabel = $model->ticketStatus?->label ?? 'Unknown';
+            TicketUpdate::create([
+                'ticket_request_id' => $id,
+                'type' => TicketUpdate::TYPE_STATUS_CHANGE,
+                'content' => sprintf('Status changed from %s to %s', $oldLabel, $newLabel),
+                'is_internal' => false,
+            ]);
+            SlaHelper::manageTicketRequestSla($model, false);
+        }
+
+        return $out;
     }
 
     /**
@@ -101,7 +130,7 @@ class TicketRequestService extends BaseService
         $all = $this->getTotalCount();
         $trashed = $this->getTrashedCount();
 
-        $query = TicketRequest::query()->with(['ticketStatus', 'serviceType']);
+        $query = TicketRequest::query()->with(['ticketStatus', 'serviceType', 'assignedTo']);
         if ($trash) {
             $query->onlyTrashed();
         }
@@ -124,9 +153,37 @@ class TicketRequestService extends BaseService
             $query->where('for_approval', request('for_approval'));
         }
 
-        $orderField = request('order', 'created_at');
-        $sortDir = request('sort', 'desc');
-        $query->orderBy($orderField, $sortDir);
+        // Sorting: whitelist + map fields (frontend sends table field keys like `service_type_name`)
+        $requestedOrder = (string) request('order', 'created_at');
+        $requestedSort = strtolower((string) request('sort', 'desc'));
+        $sortDir = in_array($requestedSort, ['asc', 'desc'], true) ? $requestedSort : 'desc';
+
+        $orderMap = [
+            // Direct columns
+            'id' => 'ticket_requests.id',
+            'request_number' => 'ticket_requests.request_number',
+            'contact_name' => 'ticket_requests.contact_name',
+            'contact_email' => 'ticket_requests.contact_email',
+            'for_approval' => 'ticket_requests.for_approval',
+            'created_at' => 'ticket_requests.created_at',
+            'created_at_human' => 'ticket_requests.created_at',
+            // Relation display fields (require join)
+            'service_type_name' => 'service_types.name',
+            'ticket_status_label' => 'ticket_statuses.label',
+        ];
+
+        $orderBy = $orderMap[$requestedOrder] ?? $orderMap['created_at'];
+
+        // Join related tables only when sorting by their display fields
+        if ($requestedOrder === 'service_type_name') {
+            $query->leftJoin('service_types', 'ticket_requests.service_type_id', '=', 'service_types.id')
+                ->select('ticket_requests.*');
+        } elseif ($requestedOrder === 'ticket_status_label') {
+            $query->leftJoin('ticket_statuses', 'ticket_requests.ticket_status_id', '=', 'ticket_statuses.id')
+                ->select('ticket_requests.*');
+        }
+
+        $query->orderBy($orderBy, $sortDir);
 
         return TicketRequestResource::collection(
             $query->paginate($perPage)->withQueryString()
@@ -142,5 +199,29 @@ class TicketRequestService extends BaseService
     {
         $model = TicketRequest::withTrashed()->with(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo'])->findOrFail($id);
         return TicketRequestResource::make($model);
+    }
+
+    /**
+     * Set ticket status to approved (for_approval=1 tickets).
+     */
+    public function approve(int $id)
+    {
+        $status = \App\Models\Support\TicketStatus::where('code', 'approved')->firstOrFail();
+        $model = TicketRequest::findOrFail($id);
+        $model->ticket_status_id = $status->id;
+        $model->save();
+        return TicketRequestResource::make($model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']));
+    }
+
+    /**
+     * Set ticket status to rejected (cancel approval).
+     */
+    public function reject(int $id)
+    {
+        $status = \App\Models\Support\TicketStatus::where('code', 'rejected')->firstOrFail();
+        $model = TicketRequest::findOrFail($id);
+        $model->ticket_status_id = $status->id;
+        $model->save();
+        return TicketRequestResource::make($model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']));
     }
 }

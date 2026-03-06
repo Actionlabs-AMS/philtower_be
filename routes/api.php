@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\Support\ServiceTypeController;
 use App\Http\Controllers\Api\Support\TicketStatusController;
 use App\Http\Controllers\Api\Support\SlaController;
 use App\Http\Controllers\Api\Support\TicketRequestController;
+use App\Http\Controllers\Api\Support\TicketUpdateController;
 
 /*
 |--------------------------------------------------------------------------
@@ -154,6 +155,10 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::put('/restore/{id}', [TicketRequestController::class, 'restore']);
 		Route::patch('/restore/{id}', [TicketRequestController::class, 'restore']);
 		Route::delete('/force-delete/{id}', [TicketRequestController::class, 'forceDelete']);
+		Route::post('/approve/{id}', [TicketRequestController::class, 'approve']);
+		Route::post('/reject/{id}', [TicketRequestController::class, 'reject']);
+		Route::get('/{id}/updates', [TicketUpdateController::class, 'index']);
+		Route::post('/{id}/updates', [TicketUpdateController::class, 'store']);
 		Route::get('/{id}', [TicketRequestController::class, 'show']);
 		Route::put('/{id}', [TicketRequestController::class, 'update']);
 		Route::delete('/{id}', [TicketRequestController::class, 'destroy']);

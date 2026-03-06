@@ -70,6 +70,12 @@ class TicketRequestController extends BaseController
     {
         try {
             $data = $this->normalizeTicketRequestData($request);
+            if (! array_key_exists('user_id', $data) || $data['user_id'] === null) {
+                $data['user_id'] = $request->user()?->id;
+            }
+            if (empty($data['submitted_at'])) {
+                $data['submitted_at'] = now();
+            }
             $resource = $this->service->store($data);
             return response($resource, 201);
         } catch (\Exception $e) {
@@ -178,5 +184,31 @@ class TicketRequestController extends BaseController
     public function bulkForceDelete(Request $request)
     {
         return parent::bulkForceDelete($request);
+    }
+
+    /**
+     * Approve a ticket request (set status to approved). For tickets with for_approval=1.
+     */
+    public function approve($id)
+    {
+        try {
+            $resource = $this->service->approve((int) $id);
+            return response()->json($resource, 200);
+        } catch (\Exception $e) {
+            return $this->messageService->responseError($e);
+        }
+    }
+
+    /**
+     * Reject/cancel a ticket request (set status to rejected).
+     */
+    public function reject($id)
+    {
+        try {
+            $resource = $this->service->reject((int) $id);
+            return response()->json($resource, 200);
+        } catch (\Exception $e) {
+            return $this->messageService->responseError($e);
+        }
     }
 }

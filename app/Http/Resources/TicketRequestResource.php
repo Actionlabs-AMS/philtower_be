@@ -39,6 +39,15 @@ class TicketRequestResource extends JsonResource
             // Flat labels for list/table (when relations loaded)
             'ticket_status_label' => $this->whenLoaded('ticketStatus', fn () => $this->ticketStatus?->label),
             'service_type_name' => $this->whenLoaded('serviceType', fn () => $this->serviceType?->name),
+            'assigned_to_name' => $this->whenLoaded('assignedTo', function () {
+                if (! $this->assignedTo) {
+                    return null;
+                }
+                $first = $this->assignedTo->getMeta('first_name');
+                $last = $this->assignedTo->getMeta('last_name');
+                $name = trim(($first ?? '') . ' ' . ($last ?? ''));
+                return $name !== '' ? $name : $this->assignedTo->user_login;
+            }),
             // Optional loaded relations (for forms/detail)
             'ticket_status' => $this->whenLoaded('ticketStatus', fn () => $this->ticketStatus ? [
                 'id' => $this->ticketStatus->id,
@@ -49,6 +58,22 @@ class TicketRequestResource extends JsonResource
                 'id' => $this->serviceType->id,
                 'name' => $this->serviceType->name,
                 'code' => $this->serviceType->code,
+            ] : null),
+            'sla' => $this->whenLoaded('sla', fn () => $this->sla ? [
+                'id' => $this->sla->id,
+                'severity' => $this->sla->severity,
+                'response_minutes' => $this->sla->response_minutes,
+                'resolution_minutes' => $this->sla->resolution_minutes,
+            ] : null),
+            'user' => $this->whenLoaded('user', fn () => $this->user ? [
+                'id' => $this->user->id,
+                'user_login' => $this->user->user_login,
+                'user_email' => $this->user->user_email,
+            ] : null),
+            'assigned_to_user' => $this->whenLoaded('assignedTo', fn () => $this->assignedTo ? [
+                'id' => $this->assignedTo->id,
+                'user_login' => $this->assignedTo->user_login,
+                'user_email' => $this->assignedTo->user_email,
             ] : null),
         ];
     }
