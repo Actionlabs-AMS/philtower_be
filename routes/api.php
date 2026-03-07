@@ -161,6 +161,7 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::put('/restore/{id}', [MyRequestController::class, 'restore']);
 		Route::patch('/restore/{id}', [MyRequestController::class, 'restore']);
 		Route::delete('/force-delete/{id}', [MyRequestController::class, 'forceDelete']);
+		Route::get('/{id}/updates', [MyRequestController::class, 'getUpdates']);
 		Route::get('/{id}', [MyRequestController::class, 'show']);
 		Route::put('/{id}', [MyRequestController::class, 'update']);
 		Route::delete('/{id}', [MyRequestController::class, 'destroy']);

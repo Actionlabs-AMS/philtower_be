@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Api\BaseController;
 use App\Http\Requests\StoreTicketRequestRequest;
 use App\Http\Requests\UpdateTicketRequestRequest;
+use App\Http\Resources\TicketUpdateResource;
 use App\Models\Support\TicketRequest;
+use App\Models\Support\TicketUpdate;
 use App\Services\MediaService;
 use App\Services\MessageService;
 use App\Services\Support\TicketRequestService;
@@ -113,6 +115,31 @@ class MyRequestController extends BaseController
             $item = $this->service->showForUser((int) $id, $userId);
             return response()->json(['data' => $item]);
         } catch (\Exception $e) {
+            return $this->messageService->responseError($e);
+        }
+    }
+
+    /**
+     * List ticket updates for a requestor's ticket (only if the ticket belongs to the current user).
+     */
+    public function getUpdates($id)
+    {
+        try {
+            $userId = request()->user()?->id;
+            if (!$userId) {
+                return response()->json(['message' => 'Unauthenticated'], 401);
+            }
+            $ticket = TicketRequest::where('id', (int) $id)->where('user_id', $userId)->first();
+            if (!$ticket) {
+                return response()->json(['message' => 'Ticket not found'], 404);
+            }
+            $perPage = (int) request('per_page', 50);
+            $updates = TicketUpdate::where('ticket_request_id', (int) $id)
+                ->with('author')
+                ->orderByDesc('created_at')
+                ->paginate($perPage);
+            return TicketUpdateResource::collection($updates)->response();
+        } catch (\Throwable $e) {
             return $this->messageService->responseError($e);
         }
     }
