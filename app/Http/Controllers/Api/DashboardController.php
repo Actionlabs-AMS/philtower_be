@@ -300,8 +300,10 @@ class DashboardController extends BaseController
 			if (!$userId) {
 				return response()->json(['success' => false, 'data' => []], 401);
 			}
-$collection = $ticketRequestService->listForUser($userId, 10, false);
-            $items = $collection->toArray(request())['data'] ?? [];
+			$collection = $ticketRequestService->listForUser($userId, 10, false);
+			// ResourceCollection::toArray() returns the array of items directly, not under 'data'
+			$items = $collection->toArray(request());
+			$items = is_array($items) ? $items : [];
 			return response()->json([
 				'success' => true,
 				'data' => $items,
