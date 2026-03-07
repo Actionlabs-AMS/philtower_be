@@ -6,6 +6,7 @@ use App\Services\DashboardService;
 use App\Services\MessageService;
 use App\Services\WidgetDataService;
 use App\Services\Support\DashboardService as SupportDashboardService;
+use App\Services\Support\TicketRequestService;
 use App\Models\DashboardWidget;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -262,6 +263,48 @@ class DashboardController extends BaseController
 			return response()->json([
 				'success' => true,
 				'data' => $data,
+			], 200);
+		} catch (\Exception $e) {
+			return $this->messageService->responseError();
+		}
+	}
+
+	/**
+	 * Get requestor dashboard statistics (current user's ticket requests only).
+	 * Used when user has Requestor role.
+	 */
+	public function getRequestorStats(TicketRequestService $ticketRequestService): JsonResponse
+	{
+		try {
+			$userId = request()->user()?->id;
+			if (!$userId) {
+				return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+			}
+			$data = $ticketRequestService->getRequestorDashboardStats($userId);
+			return response()->json([
+				'success' => true,
+				'data' => $data,
+			], 200);
+		} catch (\Exception $e) {
+			return $this->messageService->responseError();
+		}
+	}
+
+	/**
+	 * Get latest ticket requests for requestor (current user, for dashboard widget).
+	 */
+	public function getRequestorLatestRequests(TicketRequestService $ticketRequestService): JsonResponse
+	{
+		try {
+			$userId = request()->user()?->id;
+			if (!$userId) {
+				return response()->json(['success' => false, 'data' => []], 401);
+			}
+$collection = $ticketRequestService->listForUser($userId, 10, false);
+            $items = $collection->toArray(request())['data'] ?? [];
+			return response()->json([
+				'success' => true,
+				'data' => $items,
 			], 200);
 		} catch (\Exception $e) {
 			return $this->messageService->responseError();

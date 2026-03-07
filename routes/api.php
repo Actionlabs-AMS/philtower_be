@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\Support\TicketStatusController;
 use App\Http\Controllers\Api\Support\SlaController;
 use App\Http\Controllers\Api\Support\TicketRequestController;
 use App\Http\Controllers\Api\Support\TicketUpdateController;
+use App\Http\Controllers\Api\Support\MyRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +56,9 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/user-registration-trend', [DashboardController::class, 'getUserRegistrationTrend']);
 		Route::get('/pages-by-status', [DashboardController::class, 'getPagesByStatus']);
 		Route::get('/ticket-stats', [DashboardController::class, 'getTicketStats']);
+		// Requestor dashboard (when user has Requestor role)
+		Route::get('/requestor/stats', [DashboardController::class, 'getRequestorStats']);
+		Route::get('/requestor/latest-requests', [DashboardController::class, 'getRequestorLatestRequests']);
 	});
 
 	// Analytics & Reports Routes
@@ -143,6 +147,23 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/{id}', [TicketStatusController::class, 'show']);
 		Route::put('/{id}', [TicketStatusController::class, 'update']);
 		Route::delete('/{id}', [TicketStatusController::class, 'destroy']);
+	});
+
+	// Support - My Request (requestor: ticket_requests scoped to current user)
+	Route::prefix('support/my-request')->group(function () {
+		Route::post('/upload-attachments', [MyRequestController::class, 'uploadAttachments']);
+		Route::get('/', [MyRequestController::class, 'index']);
+		Route::post('/', [MyRequestController::class, 'store']);
+		Route::post('/bulk/delete', [MyRequestController::class, 'bulkDelete']);
+		Route::post('/bulk/restore', [MyRequestController::class, 'bulkRestore']);
+		Route::post('/bulk/force-delete', [MyRequestController::class, 'bulkForceDelete']);
+		Route::get('/archived', [MyRequestController::class, 'getTrashed']);
+		Route::put('/restore/{id}', [MyRequestController::class, 'restore']);
+		Route::patch('/restore/{id}', [MyRequestController::class, 'restore']);
+		Route::delete('/force-delete/{id}', [MyRequestController::class, 'forceDelete']);
+		Route::get('/{id}', [MyRequestController::class, 'show']);
+		Route::put('/{id}', [MyRequestController::class, 'update']);
+		Route::delete('/{id}', [MyRequestController::class, 'destroy']);
 	});
 
 	// Ticket Management - All Tickets (ticket_requests)

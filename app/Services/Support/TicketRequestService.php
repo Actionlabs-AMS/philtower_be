@@ -167,6 +167,7 @@ class TicketRequestService extends BaseService
             'for_approval' => 'ticket_requests.for_approval',
             'created_at' => 'ticket_requests.created_at',
             'created_at_human' => 'ticket_requests.created_at',
+            'updated_at' => 'ticket_requests.updated_at',
             // Relation display fields (require join)
             'service_type_name' => 'service_types.name',
             'ticket_status_label' => 'ticket_statuses.label',
@@ -223,5 +224,107 @@ class TicketRequestService extends BaseService
         $model->ticket_status_id = $status->id;
         $model->save();
         return TicketRequestResource::make($model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']));
+    }
+
+    /**
+     * Dashboard stats for requestor (current user's ticket_requests only).
+     * Returns total_requests, in_progress (in_progress+assigned+new+pending+for_approval+approved), open_requests (same as in_progress for client view), resolved_requests (resolved+closed).
+     */
+    public function getRequestorDashboardStats(int $userId): array
+    {
+        $base = TicketRequest::query()->where('user_id', $userId);
+        $total = (clone $base)->count();
+
+        $statusCodes = \App\Models\Support\TicketStatus::all()->keyBy('id');
+        $openCodes = ['new', 'assigned', 'pending', 'for_approval', 'approved'];
+        $inProgressCodes = ['in_progress'];
+        $resolvedCodes = ['resolved', 'closed'];
+
+        $openStatusIds = $statusCodes->filter(fn ($s) => in_array($s->code, $openCodes, true))->keys()->toArray();
+        $inProgressStatusIds = $statusCodes->filter(fn ($s) => in_array($s->code, $inProgressCodes, true))->keys()->toArray();
+        $resolvedStatusIds = $statusCodes->filter(fn ($s) => in_array($s->code, $resolvedCodes, true))->keys()->toArray();
+
+        $in_progress = empty($inProgressStatusIds) ? 0 : (clone $base)->whereIn('ticket_status_id', $inProgressStatusIds)->count();
+        $open_requests = empty($openStatusIds) ? 0 : (clone $base)->whereIn('ticket_status_id', $openStatusIds)->count();
+        $resolved_requests = empty($resolvedStatusIds) ? 0 : (clone $base)->whereIn('ticket_status_id', $resolvedStatusIds)->count();
+
+        return [
+            'total_requests' => $total,
+            'in_progress' => $in_progress + $open_requests,
+            'open_requests' => $open_requests + $in_progress,
+            'resolved_requests' => $resolved_requests,
+        ];
+    }
+
+    /**
+     * List ticket requests for a specific user (requestor). Paginated, optional trash.
+     */
+    public function listForUser(int $userId, int $perPage = 10, bool $trash = false): AnonymousResourceCollection
+    {
+        $baseQuery = TicketRequest::query()->where('user_id', $userId);
+        $all = (clone $baseQuery)->count();
+        $trashed = (clone $baseQuery)->onlyTrashed()->count();
+
+        $query = TicketRequest::query()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'assignedTo']);
+        if ($trash) {
+            $query->onlyTrashed();
+        }
+
+        if (request('search')) {
+            $search = request('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('request_number', 'like', '%' . $search . '%')
+                    ->orWhere('contact_name', 'like', '%' . $search . '%')
+                    ->orWhere('contact_email', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%');
+            });
+        }
+
+        if (request()->filled('ticket_status_id')) {
+            $query->where('ticket_status_id', request('ticket_status_id'));
+        }
+
+        $requestedOrder = (string) request('order', 'updated_at');
+        $requestedSort = strtolower((string) request('sort', 'desc'));
+        $sortDir = in_array($requestedSort, ['asc', 'desc'], true) ? $requestedSort : 'desc';
+
+        $orderMap = [
+            'id' => 'ticket_requests.id',
+            'request_number' => 'ticket_requests.request_number',
+            'contact_name' => 'ticket_requests.contact_name',
+            'contact_email' => 'ticket_requests.contact_email',
+            'created_at' => 'ticket_requests.created_at',
+            'updated_at' => 'ticket_requests.updated_at',
+            'service_type_name' => 'service_types.name',
+            'ticket_status_label' => 'ticket_statuses.label',
+        ];
+        $orderBy = $orderMap[$requestedOrder] ?? $orderMap['updated_at'];
+
+        if ($requestedOrder === 'service_type_name') {
+            $query->leftJoin('service_types', 'ticket_requests.service_type_id', '=', 'service_types.id')
+                ->select('ticket_requests.*');
+        } elseif ($requestedOrder === 'ticket_status_label') {
+            $query->leftJoin('ticket_statuses', 'ticket_requests.ticket_status_id', '=', 'ticket_statuses.id')
+                ->select('ticket_requests.*');
+        }
+        $query->orderBy($orderBy, $sortDir);
+
+        return TicketRequestResource::collection(
+            $query->paginate($perPage)->withQueryString()
+        )->additional([
+            'meta' => [
+                'all' => $all,
+                'trashed' => $trashed,
+            ],
+        ]);
+    }
+
+    /**
+     * Show a single ticket request; ensure it belongs to the given user (for requestor).
+     */
+    public function showForUser(int $id, int $userId)
+    {
+        $model = TicketRequest::withTrashed()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo'])->findOrFail($id);
+        return TicketRequestResource::make($model);
     }
 }

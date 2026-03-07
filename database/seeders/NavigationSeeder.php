@@ -233,6 +233,30 @@ class NavigationSeeder extends Seeder
                     ],
                 ],
             ],
+
+            // ============================================
+            // Support / Requestor application (Dashboard shared above; Profile shared above)
+            // ============================================
+            [
+                'name' => 'My Requests',
+                'slug' => 'my-request',
+                'icon' => 'document-text',
+                'description' => 'View and manage your support ticket requests',
+                'parent_id' => null,
+                'active' => true,
+                'show_in_menu' => true,
+                'children' => [],
+            ],
+            [
+                'name' => 'Help Center',
+                'slug' => 'help-center',
+                'icon' => 'help-circle',
+                'description' => 'Frequently asked questions and help using the portal',
+                'parent_id' => null,
+                'active' => true,
+                'show_in_menu' => true,
+                'children' => [],
+            ],
         ];
 
         // Create navigations recursively

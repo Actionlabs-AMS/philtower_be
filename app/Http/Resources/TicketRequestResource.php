@@ -35,6 +35,7 @@ class TicketRequestResource extends JsonResource
             'created_at' => $this->created_at?->toIso8601String(),
             'created_at_human' => $this->created_at_human,
             'updated_at' => $this->updated_at?->toIso8601String(),
+            'last_updated_at_human' => $this->updated_at?->format('M j, Y g:i A'),
             'deleted_at' => $this->deleted_at?->toIso8601String(),
             // Flat labels for list/table (when relations loaded)
             'ticket_status_label' => $this->whenLoaded('ticketStatus', fn () => $this->ticketStatus?->label),
