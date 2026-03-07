@@ -44,10 +44,19 @@ class TicketRequestResource extends JsonResource
                 if (! $this->assignedTo) {
                     return null;
                 }
-                $first = $this->assignedTo->getMeta('first_name');
-                $last = $this->assignedTo->getMeta('last_name');
-                $name = trim(($first ?? '') . ' ' . ($last ?? ''));
-                return $name !== '' ? $name : $this->assignedTo->user_login;
+                try {
+                    if (method_exists($this->assignedTo, 'getMeta')) {
+                        $first = $this->assignedTo->getMeta('first_name');
+                        $last = $this->assignedTo->getMeta('last_name');
+                        $name = trim(($first ?? '') . ' ' . ($last ?? ''));
+                        if ($name !== '') {
+                            return $name;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Fall through to user_login
+                }
+                return $this->assignedTo->user_login ?? null;
             }),
             // Optional loaded relations (for forms/detail)
             'ticket_status' => $this->whenLoaded('ticketStatus', fn () => $this->ticketStatus ? [

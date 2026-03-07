@@ -88,10 +88,25 @@ class TicketRequestService extends BaseService
         return $data;
     }
 
+    /**
+     * Strip nulls for columns that have non-null DB defaults so the database can apply defaults.
+     */
+    protected function prepareDataForPersistence(array $data): array
+    {
+        $nullableDefaults = ['slas_id' => 3, 'ticket_status_id' => 1, 'for_approval' => self::FOR_APPROVAL_AUTO];
+        foreach ($nullableDefaults as $key => $default) {
+            if (array_key_exists($key, $data) && $data[$key] === null) {
+                unset($data[$key]);
+            }
+        }
+        return $data;
+    }
+
     public function store(array $data)
     {
         $data = $this->applyForApprovalFromServiceType($data);
         $data = $this->normalizeAttachmentMetadata($data);
+        $data = $this->prepareDataForPersistence($data);
         return parent::store($data);
     }
 
@@ -99,6 +114,7 @@ class TicketRequestService extends BaseService
     {
         $data = $this->applyForApprovalFromServiceType($data);
         $data = $this->normalizeAttachmentMetadata($data);
+        $data = $this->prepareDataForPersistence($data);
 
         $model = TicketRequest::with('ticketStatus')->findOrFail($id);
         $oldStatusId = $model->ticket_status_id;
