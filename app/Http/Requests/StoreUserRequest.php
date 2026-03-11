@@ -26,26 +26,29 @@ class StoreUserRequest extends FormRequest
 			"user_email" => "required|email|unique:users,user_email",
 			'user_role' => [
 					'required',
-					'json',
 					function ($attribute, $value, $fail) {
-							$decoded = json_decode($value, true);
-
-							// Check if decoding failed or result is not an object
-							if (!is_array($decoded)) {
-									return $fail("The $attribute must be a valid JSON object.");
+							// Value may already be an array/object when request is application/json
+							if (is_string($value)) {
+									$decoded = json_decode($value, true);
+									if (!is_array($decoded)) {
+											return $fail("The $attribute must be a valid JSON object or array.");
+									}
+							} elseif (is_array($value)) {
+									$decoded = $value;
+							} elseif (is_object($value)) {
+									$decoded = (array) $value;
+							} else {
+									return $fail("The $attribute must be a valid JSON object or array.");
 							}
 
-							// If it's an empty array, reject
 							if (empty($decoded)) {
 									return $fail("The $attribute cannot be an empty array.");
 							}
 
-							// Must contain 'id'
 							if (!isset($decoded['id'])) {
 									return $fail("The $attribute must contain an 'id'.");
 							}
 
-							// Optional: reject certain roles by ID
 							if ($decoded['id'] == 1) {
 									return $fail("The selected role is not allowed.");
 							}
