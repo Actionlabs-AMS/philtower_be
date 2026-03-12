@@ -491,6 +491,10 @@ class UserController extends BaseController
       if(isset($request->position))
         $meta_details['position'] = $request->position;
     
+      if (isset($request->can_view_all)) {
+        $meta_details['can_view_all'] = $request->boolean('can_view_all') ? '1' : '0';
+      }
+
       if(isset($request->user_role)) {
         // Handle user_role as object or array - convert to JSON string for user_meta
         if (is_array($request->user_role) || is_object($request->user_role)) {
@@ -632,6 +636,10 @@ class UserController extends BaseController
       if(isset($request->position))
         $meta_details['position'] = $request->position;
     
+      if (isset($request->can_view_all)) {
+        $meta_details['can_view_all'] = $request->boolean('can_view_all') ? '1' : '0';
+      }
+
       if(isset($request->user_role)) {
         // Handle user_role as object or array - convert to JSON string for user_meta
         if (is_array($request->user_role) || is_object($request->user_role)) {

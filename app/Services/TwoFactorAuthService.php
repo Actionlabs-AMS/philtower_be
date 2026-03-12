@@ -4,10 +4,8 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\TwoFactorAuth;
-use App\Mail\TwoFactorCodeMail;
 use App\Services\MicrosoftGraphService;
 use App\Services\OptionService;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -73,7 +71,6 @@ class TwoFactorAuthService
             $emailSent = false;
             $lastError = null;
 
-            // Try Microsoft Graph first
             try {
                 MicrosoftGraphService::sendTwoFactorCodeEmail($user, $code);
                 $emailSent = true;
@@ -83,39 +80,12 @@ class TwoFactorAuthService
                 ]);
             } catch (\Exception $e) {
                 $lastError = $e->getMessage();
-                Log::warning('Microsoft Graph email failed, trying Laravel Mail', [
+                Log::error('Microsoft Graph failed to send 2FA code', [
                     'user_id' => $user->id,
+                    'email' => $this->anonymizeEmail($user->user_email),
                     'error' => $lastError,
+                    'trace' => $e->getTraceAsString(),
                 ]);
-
-                // Fallback to Laravel Mail (SMTP)
-                try {
-                    Mail::to($user->user_email)->send(new TwoFactorCodeMail($code, $user));
-                    $emailSent = true;
-                    Log::info('2FA code sent via Laravel Mail (SMTP)', [
-                        'user_id' => $user->id,
-                        'email' => $this->anonymizeEmail($user->user_email),
-                        'mailer' => config('mail.default'),
-                    ]);
-                } catch (\Illuminate\Mail\SendException $mailException) {
-                    $lastError = $mailException->getMessage();
-                    Log::error('Laravel Mail (SMTP) failed to send 2FA code', [
-                        'user_id' => $user->id,
-                        'email' => $this->anonymizeEmail($user->user_email),
-                        'error' => $lastError,
-                        'mailer' => config('mail.default'),
-                        'smtp_host' => config('mail.mailers.smtp.host'),
-                        'trace' => $mailException->getTraceAsString(),
-                    ]);
-                } catch (\Exception $e) {
-                    $lastError = $e->getMessage();
-                    Log::error('Unexpected error sending 2FA email', [
-                        'user_id' => $user->id,
-                        'email' => $this->anonymizeEmail($user->user_email),
-                        'error' => $lastError,
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                }
             }
 
             if (!$emailSent) {

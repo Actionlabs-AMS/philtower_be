@@ -215,6 +215,28 @@ class MicrosoftGraphHelper
   }
 
   /**
+   * Send a Laravel Mailable via Microsoft Graph (avoids SMTP/550 Relaying denied).
+   * Use this from controllers and listeners instead of Mail::to()->send() or queue().
+   *
+   * @param string|array $to Recipient email address(es)
+   * @param \Illuminate\Mail\Mailable $mailable Mailable instance (e.g. new TicketCreatedMail($ticket))
+   * @param array $cc Optional CC addresses
+   * @return bool
+   */
+  public static function sendMailable($to, $mailable, $cc = [])
+  {
+    $subject = 'Notification';
+    if (method_exists($mailable, 'envelope')) {
+      $envelope = $mailable->envelope();
+      if ($envelope && isset($envelope->subject)) {
+        $subject = $envelope->subject;
+      }
+    }
+    $body = $mailable->render();
+    return self::sendEmail($to, $subject, $body ?: '', $cc);
+  }
+
+  /**
    * Send user registration confirmation email
    */
   public static function sendUserRegistrationEmail($to, $userName, $verificationLink)

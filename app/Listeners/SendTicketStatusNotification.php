@@ -3,10 +3,10 @@
 namespace App\Listeners;
 
 use App\Events\TicketStatusChanged;
+use App\Helpers\MicrosoftGraphHelper;
 use App\Mail\TicketForApprovalMail;
 use App\Mail\TicketResolvedMail;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Support\Facades\Mail;
 
 class SendTicketStatusNotification implements ShouldQueue
 {
@@ -21,7 +21,7 @@ class SendTicketStatusNotification implements ShouldQueue
                 ? $ticket->assignedTo->user_email
                 : null;
             if ($recipient) {
-                Mail::to($recipient)->queue(new TicketForApprovalMail($ticket));
+                MicrosoftGraphHelper::sendMailable($recipient, new TicketForApprovalMail($ticket));
             }
             return;
         }
@@ -29,7 +29,7 @@ class SendTicketStatusNotification implements ShouldQueue
         if ($newCode === 'resolved') {
             $ticket->load(['user']);
             if ($ticket->user_id && $ticket->user?->user_email) {
-                Mail::to($ticket->user->user_email)->queue(new TicketResolvedMail($ticket));
+                MicrosoftGraphHelper::sendMailable($ticket->user->user_email, new TicketResolvedMail($ticket));
             }
         }
     }

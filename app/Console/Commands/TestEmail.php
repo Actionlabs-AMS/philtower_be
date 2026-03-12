@@ -3,12 +3,11 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Config;
 use App\Services\OptionService;
 use App\Models\User;
-use App\Mail\TwoFactorCodeMail;
 use App\Services\MicrosoftGraphService;
+use App\Helpers\MicrosoftGraphHelper;
 
 class TestEmail extends Command
 {
@@ -108,37 +107,20 @@ class TestEmail extends Command
      */
     protected function testSimpleEmail($email)
     {
-        $this->info("Testing simple email to: {$email}");
+        $this->info("Testing simple email to: {$email} (via Microsoft Graph)");
         $this->line('─────────────────────────────────────');
 
         try {
-            Mail::raw('This is a test email from BaseCode SMTP configuration. If you receive this, your SMTP settings are working correctly!', function ($message) use ($email) {
-                $message->to($email)
-                        ->subject('BaseCode SMTP Test Email');
-            });
+            $body = '<p>This is a test email from BaseCode. If you receive this, Microsoft Graph email is working correctly.</p>';
+            MicrosoftGraphHelper::sendEmail($email, 'BaseCode Test Email', $body);
 
-            $this->info('✓ Email sent successfully!');
+            $this->info('✓ Email sent successfully via Microsoft Graph!');
             $this->line("Check inbox: {$email}");
             return true;
-        } catch (\Illuminate\Mail\SendException $e) {
-            $this->error('✗ Failed to send email via SMTP');
-            $this->error('Error: ' . $e->getMessage());
-            
-            if ($e->getPrevious()) {
-                $this->error('Previous: ' . $e->getPrevious()->getMessage());
-            }
-            
-            $this->newLine();
-            $this->warn('Troubleshooting:');
-            $this->line('1. Check SMTP host, port, and credentials');
-            $this->line('2. Verify firewall allows outbound SMTP connections');
-            $this->line('3. Check if encryption (TLS/SSL) matches server requirements');
-            $this->line('4. Review logs: storage/logs/laravel.log');
-            
-            return false;
         } catch (\Exception $e) {
-            $this->error('✗ Unexpected error: ' . $e->getMessage());
-            $this->error('Trace: ' . $e->getTraceAsString());
+            $this->error('✗ Failed to send email: ' . $e->getMessage());
+            $this->newLine();
+            $this->warn('Ensure Microsoft Graph is configured: MICROSOFT_TENANT_ID, MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_SENDER_EMAIL in .env or System Settings > Email.');
             return false;
         }
     }
@@ -170,37 +152,12 @@ class TestEmail extends Command
             $this->line("Generated test code: {$testCode}");
             $this->newLine();
 
-            // Try Microsoft Graph first
-            $this->info('Attempting to send via Microsoft Graph...');
-            try {
-                MicrosoftGraphService::sendTwoFactorCodeEmail($user, $testCode);
-                $this->info('✓ Email sent via Microsoft Graph');
-                return true;
-            } catch (\Exception $e) {
-                $this->warn('Microsoft Graph failed: ' . $e->getMessage());
-                $this->info('Falling back to Laravel Mail (SMTP)...');
-            }
-
-            // Fallback to Laravel Mail
-            try {
-                Mail::to($user->user_email)->send(new TwoFactorCodeMail($testCode, $user));
-                $this->info('✓ Email sent via Laravel Mail (SMTP)');
-                $this->line("Check inbox: {$user->user_email}");
-                $this->line("Test code: {$testCode}");
-                return true;
-            } catch (\Illuminate\Mail\SendException $e) {
-                $this->error('✗ Failed to send 2FA email via SMTP');
-                $this->error('Error: ' . $e->getMessage());
-                
-                if ($e->getPrevious()) {
-                    $this->error('Previous: ' . $e->getPrevious()->getMessage());
-                }
-                
-                return false;
-            } catch (\Exception $e) {
-                $this->error('✗ Unexpected error: ' . $e->getMessage());
-                return false;
-            }
+            $this->info('Sending via Microsoft Graph...');
+            MicrosoftGraphService::sendTwoFactorCodeEmail($user, $testCode);
+            $this->info('✓ Email sent via Microsoft Graph');
+            $this->line("Check inbox: {$user->user_email}");
+            $this->line("Test code: {$testCode}");
+            return true;
 
         } catch (\Exception $e) {
             $this->error('✗ Error: ' . $e->getMessage());

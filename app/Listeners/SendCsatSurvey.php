@@ -3,10 +3,10 @@
 namespace App\Listeners;
 
 use App\Events\TicketClosed;
+use App\Helpers\MicrosoftGraphHelper;
 use App\Mail\TicketCsatMail;
 use App\Models\Support\TicketRequest;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class SendCsatSurvey implements ShouldQueue
@@ -20,12 +20,11 @@ class SendCsatSurvey implements ShouldQueue
             return;
         }
 
-        // Generate a unique CSAT token if not already set
         if (! $ticket->csat_token) {
             TicketRequest::where('id', $ticket->id)->update(['csat_token' => (string) Str::uuid()]);
             $ticket->refresh();
         }
 
-        Mail::to($ticket->user->user_email)->queue(new TicketCsatMail($ticket));
+        MicrosoftGraphHelper::sendMailable($ticket->user->user_email, new TicketCsatMail($ticket));
     }
 }

@@ -551,45 +551,33 @@ Route::get('/test-microsoft-graph', function () {
     }
 });
 
-// Test SMTP Email Configuration Route
+// Test email via Microsoft Graph (avoids SMTP 550 Relaying denied)
 Route::post('/test-smtp-email', function (\Illuminate\Http\Request $request) {
+    $mailConfig = [
+        'default' => config('mail.default'),
+        'from' => config('mail.from'),
+        'smtp_host' => config('mail.mailers.smtp.host'),
+        'smtp_port' => config('mail.mailers.smtp.port'),
+        'smtp_encryption' => config('mail.mailers.smtp.encryption'),
+        'smtp_username' => config('mail.mailers.smtp.username') ? '***configured***' : 'not set',
+    ];
+
     try {
         $email = $request->input('email', 'test@example.com');
-        
-        // Get current mail configuration
-        $mailConfig = [
-            'default' => config('mail.default'),
-            'from' => config('mail.from'),
-            'smtp_host' => config('mail.mailers.smtp.host'),
-            'smtp_port' => config('mail.mailers.smtp.port'),
-            'smtp_encryption' => config('mail.mailers.smtp.encryption'),
-            'smtp_username' => config('mail.mailers.smtp.username') ? '***configured***' : 'not set',
-        ];
-        
-        // Try to send a test email
-        \Illuminate\Support\Facades\Mail::raw('This is a test email from BaseCode SMTP configuration. If you receive this, your SMTP settings are working correctly!', function ($message) use ($email) {
-            $message->to($email)
-                    ->subject('BaseCode SMTP Test Email');
-        });
-        
+        $body = '<p>This is a test email from BaseCode. If you receive this, Microsoft Graph email is working correctly.</p>';
+        \App\Helpers\MicrosoftGraphHelper::sendEmail($email, 'BaseCode Test Email', $body);
+
         return response()->json([
             'success' => true,
-            'message' => 'Test email sent successfully to ' . $email,
+            'message' => 'Test email sent successfully to ' . $email . ' via Microsoft Graph',
             'mail_config' => $mailConfig,
         ]);
-    } catch (\Illuminate\Mail\SendException $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to send test email via SMTP',
-            'error' => $e->getMessage(),
-            'mail_config' => $mailConfig ?? [],
-        ], 500);
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
-            'message' => 'Unexpected error',
+            'message' => 'Failed to send test email',
             'error' => $e->getMessage(),
-            'mail_config' => $mailConfig ?? [],
+            'mail_config' => $mailConfig,
         ], 500);
     }
 });

@@ -3,9 +3,9 @@
 namespace App\Listeners;
 
 use App\Events\TicketCreated;
+use App\Helpers\MicrosoftGraphHelper;
 use App\Mail\TicketCreatedMail;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Support\Facades\Mail;
 
 class SendTicketCreatedNotification implements ShouldQueue
 {
@@ -15,7 +15,7 @@ class SendTicketCreatedNotification implements ShouldQueue
         $ticket->load(['assignedTo']);
 
         if ($ticket->assigned_to && $ticket->assignedTo?->user_email) {
-            Mail::to($ticket->assignedTo->user_email)->queue(new TicketCreatedMail($ticket));
+            MicrosoftGraphHelper::sendMailable($ticket->assignedTo->user_email, new TicketCreatedMail($ticket));
         }
     }
 }

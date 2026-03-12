@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Services\TwoFactorAuthService;
 use App\Services\MicrosoftGraphService;
 use App\Services\OptionService;
-use Illuminate\Support\Facades\Mail;
 use App\Mail\VerifyEmail;
 use App\Mail\ForgotPasswordEmail;
 use Illuminate\Support\Facades\Auth; 
@@ -139,21 +138,12 @@ class AuthController extends Controller
 
 		$message = '';
 		try {
-			// Send verification email using Microsoft Graph
 			$emailSent = MicrosoftGraphService::sendUserRegistrationEmail($user, $verify_url);
-			if ($emailSent) {
-				$message = 'Aww yeah, you have successfuly registered. Verification email has been sent to your registered email.';
-			} else {
-				$message = 'Registration successful, but there was an issue sending the verification email. Please contact support.';
-			}
+			$message = $emailSent
+				? 'Aww yeah, you have successfuly registered. Verification email has been sent to your registered email.'
+				: 'Registration successful, but there was an issue sending the verification email. Please contact support.';
 		} catch (\Exception $e) {
-			// Fallback to Laravel Mail if Microsoft Graph fails
-			$options = array('verify_url' => $verify_url);
-			if(Mail::to($user->user_email)->send(new VerifyEmail($user, $options))) {
-				$message = 'Aww yeah, you have successfuly registered. Verification email has been sent to your registered email.';
-			} else {
-				$message = 'Registration successful, but there was an issue sending the verification email. Please contact support.';
-			}
+			$message = 'Registration successful, but there was an issue sending the verification email. Please contact support.';
 		}
 
 		// Log the user registration
@@ -287,24 +277,12 @@ class AuthController extends Controller
 			$login_url = env('ADMIN_APP_URL')."/login";
 			
 			try {
-				// Send password reset email using Microsoft Graph
 				$emailSent = MicrosoftGraphService::sendPasswordResetEmail($user, $login_url);
-				if ($emailSent) {
-					$message = 'Your temporary password has been sent to your registered email.';
-				} else {
-					$message = 'Password reset successful, but there was an issue sending the email. Please contact support.';
-				}
+				$message = $emailSent
+					? 'Your temporary password has been sent to your registered email.'
+					: 'Password reset successful, but there was an issue sending the email. Please contact support.';
 			} catch (\Exception $e) {
-				// Fallback to Laravel Mail if Microsoft Graph fails
-				$options = array(
-					'login_url' => $login_url,
-					'new_password' => $new_password
-				);
-				if(Mail::to($user->user_email)->send(new ForgotPasswordEmail($user, $options))) {
-					$message = 'Your temporary password has been sent to your registered email.';
-				} else {
-					$message = 'Password reset successful, but there was an issue sending the email. Please contact support.';
-				}
+				$message = 'Password reset successful, but there was an issue sending the email. Please contact support.';
 			}
 
 			// Log password reset
