@@ -167,4 +167,13 @@ class User extends Authenticatable
 		$meta = $this->getUserMetas()->where('meta_key', $key)->first();
 		return $meta ? $meta->meta_value : null;
 	}
+
+	/**
+	 * Whether the user can see all tickets (vs. only assigned).
+	 * Users without this (e.g. non–super-admin) see only tickets assigned to them.
+	 */
+	public function canViewAllTickets(): bool
+	{
+		return $this->role && $this->role->is_super_admin;
+	}
 }

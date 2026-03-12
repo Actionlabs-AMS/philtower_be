@@ -75,12 +75,13 @@ class AnalyticsController extends BaseController
 			$serviceTypeId = $request->query('service_type_id') ? (int) $request->query('service_type_id') : null;
 			$dateFrom = $request->query('date_from') ?: null;
 			$dateTo = $request->query('date_to') ?: null;
+			$ticketStatusId = $request->query('ticket_status_id') ? (int) $request->query('ticket_status_id') : null;
 			$statisticsType = $request->query('statistics_type', 'tickets');
 			if (!in_array($statisticsType, ['tickets', 'agents'], true)) {
 				$statisticsType = 'tickets';
 			}
 
-			$data = $ticketAnalytics->getTicketsOverview($serviceTypeId, $dateFrom, $dateTo, $statisticsType);
+			$data = $ticketAnalytics->getTicketsOverview($serviceTypeId, $dateFrom, $dateTo, $statisticsType, $request->user(), $ticketStatusId);
 
 			return response()->json([
 				'success' => true,

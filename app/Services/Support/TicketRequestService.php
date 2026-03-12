@@ -5,9 +5,14 @@ namespace App\Services\Support;
 use App\Helpers\SlaHelper;
 use App\Http\Resources\TicketRequestResource;
 use App\Models\Support\ServiceType;
+use App\Events\TicketAssigned;
+use App\Events\TicketClosed;
+use App\Events\TicketCreated;
+use App\Events\TicketStatusChanged;
 use App\Models\Support\TicketRequest;
 use App\Models\Support\TicketStatus;
 use App\Models\Support\TicketUpdate;
+use App\Models\User;
 use App\Services\BaseService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -104,10 +109,25 @@ class TicketRequestService extends BaseService
 
     public function store(array $data)
     {
+        // Allow technicians to create tickets on behalf of a requester user
+        if (isset($data['requester_user_id']) && $data['requester_user_id']) {
+            $data['user_id'] = (int) $data['requester_user_id'];
+        }
+        unset($data['requester_user_id']);
+
         $data = $this->applyForApprovalFromServiceType($data);
         $data = $this->normalizeAttachmentMetadata($data);
         $data = $this->prepareDataForPersistence($data);
-        return parent::store($data);
+        $resource = parent::store($data);
+        $model = $resource->resource;
+        if ($model instanceof TicketRequest) {
+            event(new TicketCreated($model));
+            // Fire TicketAssigned if assigned at creation time
+            if ($model->assigned_to) {
+                event(new TicketAssigned($model));
+            }
+        }
+        return $resource;
     }
 
     public function update(array $data, int $id)
@@ -119,6 +139,7 @@ class TicketRequestService extends BaseService
         $model = TicketRequest::with('ticketStatus')->findOrFail($id);
         $oldStatusId = $model->ticket_status_id;
         $oldLabel = $model->ticketStatus?->label ?? 'Unknown';
+        $oldAssignedTo = $model->assigned_to;
 
         $out = parent::update($data, $id);
         $model->refresh()->load(['ticketStatus']);
@@ -133,6 +154,17 @@ class TicketRequestService extends BaseService
                 'is_internal' => false,
             ]);
             SlaHelper::manageTicketRequestSla($model, false);
+            event(new TicketStatusChanged($model, $oldLabel, $newLabel, (int) $oldStatusId, (int) $newStatusId));
+
+            // Fire TicketClosed when status transitions to 'closed'
+            if ($model->ticketStatus?->code === 'closed') {
+                event(new TicketClosed($model));
+            }
+        }
+
+        // Fire TicketAssigned when assigned_to changes to a new user
+        if (array_key_exists('assigned_to', $data) && $data['assigned_to'] && (int) $data['assigned_to'] !== (int) $oldAssignedTo) {
+            event(new TicketAssigned($model));
         }
 
         return $out;
@@ -140,13 +172,24 @@ class TicketRequestService extends BaseService
 
     /**
      * List ticket requests (paginated). Optional trash view.
+     * If user is given and cannot view all tickets, only tickets assigned to that user are returned.
+     *
+     * @param  int  $perPage
+     * @param  bool  $trash
+     * @param  User|null  $user  Current user; when null, uses auth()->user()
      */
-    public function list($perPage = 10, $trash = false): AnonymousResourceCollection
+    public function list($perPage = 10, $trash = false, ?User $user = null): AnonymousResourceCollection
     {
-        $all = $this->getTotalCount();
-        $trashed = $this->getTrashedCount();
+        $user = $user ?? auth()->user();
+        $baseQuery = TicketRequest::query();
+        if ($user && ! $user->canViewAllTickets()) {
+            $baseQuery->where('assigned_to', $user->id);
+        }
 
-        $query = TicketRequest::query()->with(['ticketStatus', 'serviceType', 'assignedTo']);
+        $all = (clone $baseQuery)->count();
+        $trashed = (clone $baseQuery)->onlyTrashed()->count();
+
+        $query = (clone $baseQuery)->with(['ticketStatus', 'serviceType', 'assignedTo']);
         if ($trash) {
             $query->onlyTrashed();
         }
@@ -163,6 +206,47 @@ class TicketRequestService extends BaseService
 
         if (request()->filled('ticket_status_id')) {
             $query->where('ticket_status_id', request('ticket_status_id'));
+        }
+
+        $statusCode = request('status');
+        if (is_string($statusCode) && $statusCode !== '') {
+            $codeToIds = [
+                'open' => ['new', 'assigned'],
+                'closed' => ['closed', 'cancelled'],
+                'in_progress' => ['in_progress'],
+                'pending' => ['pending'],
+                'resolved' => ['resolved'],
+            ];
+            $codes = $codeToIds[$statusCode] ?? [$statusCode];
+            $statusIds = TicketStatus::whereIn('code', $codes)->pluck('id')->toArray();
+            if (! empty($statusIds)) {
+                $query->whereIn('ticket_status_id', $statusIds);
+            }
+        }
+
+        $slaStatus = request('sla_status');
+        if (is_string($slaStatus) && $slaStatus === 'breached') {
+            $breachedIds = \App\Models\Support\SlaClock::query()
+                ->where('entity_type', 'ticket_request')
+                ->where('status', 'breached')
+                ->pluck('entity_id')
+                ->unique()
+                ->values()
+                ->all();
+            if (! empty($breachedIds)) {
+                $query->whereIn('ticket_requests.id', $breachedIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        $assignedFilter = request('assigned');
+        if (is_string($assignedFilter) && $assignedFilter !== '') {
+            if ($assignedFilter === 'me' && $user) {
+                $query->where('assigned_to', $user->id);
+            } elseif ($assignedFilter === 'unassigned') {
+                $query->whereNull('assigned_to');
+            }
         }
 
         if (request()->filled('for_approval')) {
@@ -223,11 +307,15 @@ class TicketRequestService extends BaseService
      */
     public function approve(int $id)
     {
-        $status = \App\Models\Support\TicketStatus::where('code', 'approved')->firstOrFail();
-        $model = TicketRequest::findOrFail($id);
+        $status = TicketStatus::where('code', 'approved')->firstOrFail();
+        $model = TicketRequest::with('ticketStatus')->findOrFail($id);
+        $oldLabel = $model->ticketStatus?->label ?? 'Unknown';
+        $oldStatusId = $model->ticket_status_id;
         $model->ticket_status_id = $status->id;
         $model->save();
-        return TicketRequestResource::make($model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']));
+        $model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']);
+        event(new TicketStatusChanged($model, $oldLabel, $status->label, (int) $oldStatusId, $status->id));
+        return TicketRequestResource::make($model);
     }
 
     /**
@@ -235,11 +323,59 @@ class TicketRequestService extends BaseService
      */
     public function reject(int $id)
     {
-        $status = \App\Models\Support\TicketStatus::where('code', 'rejected')->firstOrFail();
-        $model = TicketRequest::findOrFail($id);
+        $status = TicketStatus::where('code', 'rejected')->firstOrFail();
+        $model = TicketRequest::with('ticketStatus')->findOrFail($id);
+        $oldLabel = $model->ticketStatus?->label ?? 'Unknown';
+        $oldStatusId = $model->ticket_status_id;
         $model->ticket_status_id = $status->id;
         $model->save();
-        return TicketRequestResource::make($model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']));
+        $model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']);
+        event(new TicketStatusChanged($model, $oldLabel, $status->label, (int) $oldStatusId, $status->id));
+        return TicketRequestResource::make($model);
+    }
+
+    /**
+     * Reassign a ticket to a new user. Logs the action as a system comment in ticket_updates.
+     *
+     * @param  int  $ticketId
+     * @param  int  $newAssigneeId
+     * @return \App\Http\Resources\TicketRequestResource
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws \InvalidArgumentException  When new assignee is invalid
+     */
+    public function reassign(int $ticketId, int $newAssigneeId)
+    {
+        $ticket = TicketRequest::findOrFail($ticketId);
+        $newAssignee = User::find($newAssigneeId);
+        if (! $newAssignee) {
+            throw new \InvalidArgumentException('Invalid assignee.');
+        }
+
+        $oldAssigneeId = $ticket->assigned_to;
+        $oldAssignee = $oldAssigneeId ? User::find($oldAssigneeId) : null;
+        $oldName = $oldAssignee ? ($oldAssignee->user_login ?? 'User #' . $oldAssigneeId) : 'Unassigned';
+        $newName = $newAssignee->user_login ?? 'User #' . $newAssigneeId;
+
+        $ticket->assigned_to = $newAssigneeId;
+        $ticket->save();
+
+        TicketUpdate::create([
+            'ticket_request_id' => $ticketId,
+            'type' => TicketUpdate::TYPE_REASSIGNMENT,
+            'content' => sprintf('Ticket reassigned from %s to %s', $oldName, $newName),
+            'metadata' => [
+                'old_assignee_id' => $oldAssigneeId,
+                'new_assignee_id' => $newAssigneeId,
+                'performed_by' => auth()->id(),
+            ],
+            'is_internal' => false,
+        ]);
+
+        $ticket->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']);
+        event(new TicketAssigned($ticket));
+
+        return TicketRequestResource::make($ticket);
     }
 
     /**

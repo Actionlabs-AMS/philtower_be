@@ -255,17 +255,35 @@ class DashboardController extends BaseController
 	 *     @OA\Response(response=401, description="Unauthenticated")
 	 * )
 	 */
-	public function getTicketStats(SupportDashboardService $supportDashboard): JsonResponse
+	public function getTicketStats(Request $request, SupportDashboardService $supportDashboard): JsonResponse
 	{
 		try {
-			$data = $supportDashboard->getTicketStats();
+			$startDate = $request->query('start_date');
+			$endDate = $request->query('end_date');
+			$serviceTypeId = $request->query('service_type_id') !== null && $request->query('service_type_id') !== ''
+				? (int) $request->query('service_type_id') : null;
+			$ticketStatusId = $request->query('ticket_status_id') !== null && $request->query('ticket_status_id') !== ''
+				? (int) $request->query('ticket_status_id') : null;
+			$user = request()->user();
+			if ($user && ! $user->relationLoaded('role')) {
+				$user->load('role');
+			}
+			$data = $supportDashboard->getTicketStats($user, $startDate, $endDate, $serviceTypeId, $ticketStatusId);
 
 			return response()->json([
 				'success' => true,
 				'data' => $data,
 			], 200);
-		} catch (\Exception $e) {
-			return $this->messageService->responseError();
+		} catch (\Throwable $e) {
+			$this->messageService->responseError($e);
+			$message = 'An error has occurred, please reload the page or try again later. Please contact the administrator if error has re-occured.';
+			if (config('app.debug')) {
+				$message .= ' ' . $e->getMessage();
+			}
+			return response()->json([
+				'success' => false,
+				'message' => $message,
+			], 500);
 		}
 	}
 

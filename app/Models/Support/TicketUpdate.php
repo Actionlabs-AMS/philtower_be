@@ -16,6 +16,7 @@ class TicketUpdate extends Model
         'user_id',
         'content',
         'type',
+        'metadata',
         'is_internal',
         'created_by',
         'updated_by',
@@ -23,6 +24,7 @@ class TicketUpdate extends Model
 
     protected $casts = [
         'is_internal' => 'boolean',
+        'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
@@ -31,6 +33,7 @@ class TicketUpdate extends Model
     public const TYPE_COMMENT = 'comment';
     public const TYPE_STATUS_CHANGE = 'status_change';
     public const TYPE_NOTE = 'note';
+    public const TYPE_REASSIGNMENT = 'reassignment';
 
     protected static function boot()
     {

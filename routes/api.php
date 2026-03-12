@@ -43,6 +43,9 @@ use App\Http\Controllers\Api\Support\MyRequestController;
 // MUST be defined BEFORE auth middleware group to avoid being caught by /{key} catch-all route
 Route::get('/system-settings/settings/general', [SettingsController::class, 'getGeneralSettings']);
 
+// Public CSAT survey rating endpoint (no auth required — accessed via email link)
+Route::post('/support/csat/{token}', [\App\Http\Controllers\Api\Support\CsatController::class, 'rate']);
+
 Route::middleware('auth:sanctum')->group(function () {
 	Route::get('/user/me', [UserController::class, 'getUser']);
 	Route::post('/logout', [AuthController::class, 'logout']);
@@ -181,6 +184,7 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::delete('/force-delete/{id}', [TicketRequestController::class, 'forceDelete']);
 		Route::post('/approve/{id}', [TicketRequestController::class, 'approve']);
 		Route::post('/reject/{id}', [TicketRequestController::class, 'reject']);
+		Route::post('/{id}/reassign', [TicketRequestController::class, 'reassign']);
 		Route::get('/{id}/updates', [TicketUpdateController::class, 'index']);
 		Route::post('/{id}/updates', [TicketUpdateController::class, 'store']);
 		Route::get('/{id}', [TicketRequestController::class, 'show']);

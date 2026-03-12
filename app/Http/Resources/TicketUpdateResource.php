@@ -17,6 +17,7 @@ class TicketUpdateResource extends JsonResource
             'user_id' => $this->user_id,
             'content' => $this->content,
             'type' => $this->type,
+            'metadata' => $this->metadata,
             'is_internal' => $this->is_internal,
             'author' => $this->when($author !== null, function () use ($author) {
                 $firstName = $author->first_name ?? $author->user_login ?? null;

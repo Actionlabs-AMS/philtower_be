@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\Support;
 
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use App\Http\Controllers\Api\BaseController;
 use App\Http\Requests\StoreTicketRequestRequest;
 use App\Http\Requests\UpdateTicketRequestRequest;
@@ -60,7 +62,7 @@ class TicketRequestController extends BaseController
         try {
             $perPage = (int) request('per_page', 10);
             $trash = (bool) request('trash', false);
-            return $this->service->list($perPage, $trash);
+            return $this->service->list($perPage, $trash, request()->user());
         } catch (\Throwable $e) {
             return $this->messageService->responseError($e);
         }
@@ -208,6 +210,57 @@ class TicketRequestController extends BaseController
             $resource = $this->service->reject((int) $id);
             return response()->json($resource, 200);
         } catch (\Exception $e) {
+            return $this->messageService->responseError($e);
+        }
+    }
+
+    /**
+     * Reassign a ticket to another user. Logs who reassigned, previous and new assignee, and timestamp.
+     * Expects JSON body: { "new_assignee_id": <user_id> } (or "newAssigneeId").
+     */
+    public function reassign(Request $request, $id)
+    {
+        try {
+            $newAssigneeId = (int) ($request->input('new_assignee_id') ?? $request->input('newAssigneeId'));
+            if ($newAssigneeId < 1) {
+                return response()->json([
+                    'message' => 'new_assignee_id is required and must be a valid user id.',
+                    'status' => false,
+                    'status_code' => 422,
+                ], 422);
+            }
+            $resource = $this->service->reassign((int) $id, $newAssigneeId);
+            return response($resource, 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Ticket not found.',
+                'status' => false,
+                'status_code' => 404,
+            ], 404);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'status' => false,
+                'status_code' => 422,
+            ], 422);
+        } catch (QueryException $e) {
+            report($e);
+            return response()->json([
+                'message' => 'Database error while saving. If you recently added new fields, run: php artisan migrate',
+                'status' => false,
+                'status_code' => 422,
+            ], 422);
+        } catch (\Exception $e) {
+            if (config('app.debug')) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'status' => false,
+                    'status_code' => 422,
+                ], 422);
+            }
             return $this->messageService->responseError($e);
         }
     }

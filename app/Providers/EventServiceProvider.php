@@ -2,6 +2,14 @@
 
 namespace App\Providers;
 
+use App\Events\TicketAssigned;
+use App\Events\TicketClosed;
+use App\Events\TicketCreated;
+use App\Events\TicketStatusChanged;
+use App\Listeners\SendCsatSurvey;
+use App\Listeners\SendTicketAssignedNotification;
+use App\Listeners\SendTicketCreatedNotification;
+use App\Listeners\SendTicketStatusNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -17,6 +25,18 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
+        ],
+        TicketCreated::class => [
+            SendTicketCreatedNotification::class,
+        ],
+        TicketStatusChanged::class => [
+            SendTicketStatusNotification::class,
+        ],
+        TicketAssigned::class => [
+            SendTicketAssignedNotification::class,
+        ],
+        TicketClosed::class => [
+            SendCsatSurvey::class,
         ],
     ];
 

@@ -22,21 +22,32 @@ class TicketAnalyticsService
      * @param string|null $dateFrom Y-m-d
      * @param string|null $dateTo   Y-m-d
      * @param string $statisticsType 'tickets' | 'agents'
+     * @param User|null $user Current user; when null, uses auth()->user(). If user cannot view all tickets, data is scoped to assigned_to.
+     * @param int|null $ticketStatusId Optional filter by ticket status
      * @return array{chart: array{labels: string[], data: int[]}, table: array, statistics_type: string}
      */
     public function getTicketsOverview(
         ?int $serviceTypeId,
         ?string $dateFrom,
         ?string $dateTo,
-        string $statisticsType = 'tickets'
+        string $statisticsType = 'tickets',
+        ?User $user = null,
+        ?int $ticketStatusId = null
     ): array {
+        $user = $user ?? auth()->user();
         $now = Carbon::now();
         $start = $dateFrom ? Carbon::parse($dateFrom)->startOfDay() : $now->copy()->subDays(30)->startOfDay();
         $end = $dateTo ? Carbon::parse($dateTo)->endOfDay() : $now->copy()->endOfDay();
 
         $base = TicketRequest::query();
+        if ($user && ! $user->canViewAllTickets()) {
+            $base->where('assigned_to', $user->id);
+        }
         if ($serviceTypeId) {
             $base->where('service_type_id', $serviceTypeId);
+        }
+        if ($ticketStatusId !== null && $ticketStatusId > 0) {
+            $base->where('ticket_status_id', $ticketStatusId);
         }
         $base->whereBetween('created_at', [$start, $end]);
 
@@ -118,6 +129,7 @@ class TicketAnalyticsService
                 'sla_clock_status' => $clock?->status,
                 'sla_clock_breached_at' => $clock?->breached_at?->toIso8601String(),
                 'sla_clock_completed_at' => $clock?->completed_at?->toIso8601String(),
+                'sla_breached' => $clock?->breached_at !== null,
             ];
         }
         return $rows;

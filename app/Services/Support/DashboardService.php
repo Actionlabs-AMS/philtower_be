@@ -16,8 +16,21 @@ use Illuminate\Support\Facades\DB;
  */
 class DashboardService
 {
-    public function getTicketStats(): array
-    {
+    /**
+     * @param  User|null  $user  Current user; when null, uses auth()->user(). If user cannot view all tickets, stats are scoped to assigned_to.
+     * @param  string|null  $startDate  Y-m-d optional filter
+     * @param  string|null  $endDate  Y-m-d optional filter
+     * @param  int|null  $serviceTypeId  Optional filter by service type
+     * @param  int|null  $ticketStatusId  Optional filter by ticket status
+     */
+    public function getTicketStats(
+        ?User $user = null,
+        ?string $startDate = null,
+        ?string $endDate = null,
+        ?int $serviceTypeId = null,
+        ?int $ticketStatusId = null
+    ): array {
+        $user = $user ?? auth()->user();
         $now = Carbon::now();
         $startOfToday = $now->copy()->startOfDay();
         $endOfToday = $now->copy()->endOfDay();
@@ -28,6 +41,29 @@ class DashboardService
         $closedStatusIds = TicketStatus::where('is_closed', true)->pluck('id')->toArray();
 
         $base = TicketRequest::query();
+        if ($user && ! $user->canViewAllTickets()) {
+            $base->where('assigned_to', $user->id);
+        }
+        if ($startDate && trim((string) $startDate) !== '') {
+            try {
+                $base->whereDate('ticket_requests.created_at', '>=', Carbon::parse($startDate)->startOfDay());
+            } catch (\Exception $e) {
+                // ignore invalid start_date
+            }
+        }
+        if ($endDate && trim((string) $endDate) !== '') {
+            try {
+                $base->whereDate('ticket_requests.created_at', '<=', Carbon::parse($endDate)->endOfDay());
+            } catch (\Exception $e) {
+                // ignore invalid end_date
+            }
+        }
+        if ($serviceTypeId !== null && $serviceTypeId > 0) {
+            $base->where('service_type_id', $serviceTypeId);
+        }
+        if ($ticketStatusId !== null && $ticketStatusId > 0) {
+            $base->where('ticket_status_id', $ticketStatusId);
+        }
 
         // Unresolved: not closed (status not in closed list)
         $unresolved = (clone $base)
@@ -170,6 +206,38 @@ class DashboardService
             $ticketSource['sources'] = [['name' => 'Portal', 'value' => $totalActive, 'color' => $colors[0]]];
         }
 
+        // SLA breach: count tickets with sla_clock status = breached (same base filters)
+        $breachedTicketIds = SlaClock::query()
+            ->where('entity_type', 'ticket_request')
+            ->where('status', 'breached')
+            ->pluck('entity_id')
+            ->unique()
+            ->values()
+            ->all();
+        $slaBreachTotal = $breachedTicketIds
+            ? (clone $base)->whereIn('id', $breachedTicketIds)->count()
+            : 0;
+        // SLA breach breakdown by service type (for pie chart)
+        $slaBreachBySource = [];
+        if ($breachedTicketIds) {
+            $breachSourceRows = (clone $base)
+                ->whereIn('ticket_requests.id', $breachedTicketIds)
+                ->join('service_types', 'ticket_requests.service_type_id', '=', 'service_types.id')
+                ->selectRaw('service_types.name as src_name, service_types.id as src_id, COUNT(*) as c')
+                ->groupBy('service_types.id', 'service_types.name')
+                ->get();
+            $slaBreachBySource = $breachSourceRows->map(function ($row, $i) use ($colors) {
+                return [
+                    'name' => $row->src_name ?? 'Other',
+                    'value' => (int) $row->c,
+                    'color' => $colors[$i % count($colors)],
+                ];
+            })->values()->all();
+        }
+        if (empty($slaBreachBySource) && $slaBreachTotal > 0) {
+            $slaBreachBySource = [['name' => 'Breached', 'value' => $slaBreachTotal, 'color' => $colors[0]]];
+        }
+
         // Agent performance: group by assigned_to
         $agentRows = (clone $base)
             ->whereNotNull('assigned_to')
@@ -223,6 +291,8 @@ class DashboardService
             'kpi_cancelled' => $kpiCancelled,
             'ticket_source' => $ticketSource,
             'agent_performance' => $agentPerformance,
+            'sla_breach_total' => $slaBreachTotal,
+            'sla_breach_by_source' => $slaBreachBySource,
         ];
     }
 
