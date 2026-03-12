@@ -533,7 +533,7 @@ Route::post('/auth/enable-2fa-setup', [AuthController::class, 'enable2FASetup'])
 Route::get('/test-microsoft-graph', function () {
     try {
         $result = \App\Services\MicrosoftGraphService::sendNotificationEmail(
-            'test@example.com',
+            'bautistael23@gmail.com',
             'BaseCode Microsoft Graph Test',
             '<h1>Microsoft Graph Integration Test</h1><p>This is a test email from BaseCode using Microsoft Graph API.</p><p>If you receive this email, the integration is working correctly!</p>'
         );
@@ -551,25 +551,24 @@ Route::get('/test-microsoft-graph', function () {
     }
 });
 
-// Test email via Microsoft Graph (avoids SMTP 550 Relaying denied)
+// Test email via MicrosoftGraphHelper (uses options table: microsoft_* and mail_from_* with .env fallback)
 Route::post('/test-smtp-email', function (\Illuminate\Http\Request $request) {
+    $optionService = app(\App\Services\OptionService::class);
     $mailConfig = [
-        'default' => config('mail.default'),
-        'from' => config('mail.from'),
-        'smtp_host' => config('mail.mailers.smtp.host'),
-        'smtp_port' => config('mail.mailers.smtp.port'),
-        'smtp_encryption' => config('mail.mailers.smtp.encryption'),
-        'smtp_username' => config('mail.mailers.smtp.username') ? '***configured***' : 'not set',
+        'source' => 'options + .env fallback (MicrosoftGraphHelper)',
+        'mail_from_address' => $optionService->getOption('mail_from_address', env('MAIL_FROM_ADDRESS')),
+        'mail_from_name' => $optionService->getOption('mail_from_name', env('MAIL_FROM_NAME')),
+        'microsoft_sender_email' => $optionService->getOption('microsoft_sender_email', env('MICROSOFT_SENDER_EMAIL')) ? '***set***' : 'not set',
     ];
 
     try {
-        $email = $request->input('email', 'test@example.com');
-        $body = '<p>This is a test email from BaseCode. If you receive this, Microsoft Graph email is working correctly.</p>';
+        $email = $request->input('email', 'bautistael23@gmail.com');
+        $body = '<p>This is a test email. If you receive this, Microsoft Graph (options table config) is working correctly.</p>';
         \App\Helpers\MicrosoftGraphHelper::sendEmail($email, 'BaseCode Test Email', $body);
 
         return response()->json([
             'success' => true,
-            'message' => 'Test email sent successfully to ' . $email . ' via Microsoft Graph',
+            'message' => 'Test email sent successfully to ' . $email . ' via Microsoft Graph (options config)',
             'mail_config' => $mailConfig,
         ]);
     } catch (\Exception $e) {

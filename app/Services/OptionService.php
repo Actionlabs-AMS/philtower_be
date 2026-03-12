@@ -317,6 +317,10 @@ class OptionService extends BaseService
     public function getEmailConfig()
     {
         $service = $this;
+        // On Windows, sendmail is not available; clear cached config if it was sendmail so we recompute with 'log'
+        if (PHP_OS_FAMILY === 'Windows' && $this->getOption('mail_mailer', '') === 'sendmail') {
+            Cache::forget('mail.config');
+        }
         return Cache::remember('mail.config', 3600, function () use ($service) {
             // Helper function to get option with env fallback
             $getConfig = function ($optionKey, $envKey, $default = null) use ($service) {
@@ -337,6 +341,10 @@ class OptionService extends BaseService
             $mailer = $getConfig('mail_mailer', 'MAIL_MAILER', 'smtp');
             if ($mailer === 'microsoft') {
                 $mailer = 'smtp'; // Use SMTP for Laravel Mail, Microsoft Graph handled separately
+            }
+            // On Windows, sendmail is not available (/usr/sbin/sendmail); use log to avoid runtime errors
+            if ($mailer === 'sendmail' && PHP_OS_FAMILY === 'Windows') {
+                $mailer = 'log';
             }
 
             // Get from address and name
