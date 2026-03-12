@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Mail;
 use App\Services\OptionService;
 use App\Models\User;
 use App\Services\MicrosoftGraphService;
@@ -18,7 +19,7 @@ class TestEmail extends Command
      */
     protected $signature = 'test:email 
                             {email : The email address to send test email to}
-                            {--type=simple : Type of test: simple, 2fa, or config}
+                            {--type=sendmail : Type of test: simple, 2fa, config, or sendmail}
                             {--user-id= : User ID for 2FA test}';
 
     /**
@@ -60,6 +61,9 @@ class TestEmail extends Command
             case 'config':
                 $this->testConfig();
                 break;
+            case 'sendmail':
+                $this->testSendmail($email);
+                break;
             case '2fa':
                 if (!$userId) {
                     $this->error('User ID is required for 2FA test. Use --user-id=1');
@@ -100,6 +104,40 @@ class TestEmail extends Command
                 ['SMTP Password', $mailConfig['mailers']['smtp']['password'] ? '***configured***' : 'not set'],
             ]
         );
+    }
+
+    /**
+     * Test email via Laravel sendmail (uses .env MAIL_MAILER=sendmail, MAIL_FROM_ADDRESS)
+     */
+    protected function testSendmail($email)
+    {
+        // Force .env credentials for this test (bypass DB mail config)
+        Config::set('mail.default', env('MAIL_MAILER', 'sendmail'));
+        Config::set('mail.from.address', env('MAIL_FROM_ADDRESS', 'support@servicedesk.com.ph'));
+        Config::set('mail.from.name', env('MAIL_FROM_NAME', 'Service Desk'));
+
+        $this->info("Testing sendmail to: {$email}");
+        $this->line('Using: MAIL_MAILER=' . config('mail.default') . ', From: ' . config('mail.from.address'));
+        $this->line('─────────────────────────────────────');
+
+        try {
+            Mail::raw(
+                'This is a test email from philtower_be (sendmail). If you receive this, sendmail is working correctly.',
+                function ($message) use ($email) {
+                    $message->to($email)
+                        ->subject('PhilTower Sendmail Test');
+                }
+            );
+
+            $this->info('✓ Email sent successfully via sendmail!');
+            $this->line("Check inbox: {$email}");
+            return true;
+        } catch (\Exception $e) {
+            $this->error('✗ Failed to send email: ' . $e->getMessage());
+            $this->newLine();
+            $this->warn('On Windows, ensure sendmail is installed (e.g. sendmail for Windows) and MAIL_SENDMAIL_PATH in .env points to it, or use SMTP instead.');
+            return false;
+        }
     }
 
     /**
