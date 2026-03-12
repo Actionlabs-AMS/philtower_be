@@ -551,25 +551,52 @@ Route::get('/test-microsoft-graph', function () {
     }
 });
 
-// Test email via MicrosoftGraphHelper (uses options table: microsoft_* and mail_from_* with .env fallback)
+// Test email: uses Microsoft Graph only when mail_mailer is "microsoft" and Graph is configured; otherwise uses Laravel Mail (sendmail/smtp/log from options)
 Route::post('/test-smtp-email', function (\Illuminate\Http\Request $request) {
     $optionService = app(\App\Services\OptionService::class);
+    $mailer = $optionService->getOption('mail_mailer', env('MAIL_MAILER', 'smtp'));
+    $useMicrosoftGraph = ($mailer === 'microsoft'
+        && $optionService->getOption('microsoft_tenant_id')
+        && $optionService->getOption('microsoft_sender_email'));
+
     $mailConfig = [
-        'source' => 'options + .env fallback (MicrosoftGraphHelper)',
+        'source' => $useMicrosoftGraph ? 'options + .env (Microsoft Graph)' : 'options + .env (Laravel Mail: ' . $mailer . ')',
+        'mail_mailer' => $mailer,
         'mail_from_address' => $optionService->getOption('mail_from_address', env('MAIL_FROM_ADDRESS')),
         'mail_from_name' => $optionService->getOption('mail_from_name', env('MAIL_FROM_NAME')),
-        'microsoft_sender_email' => $optionService->getOption('microsoft_sender_email', env('MICROSOFT_SENDER_EMAIL')) ? '***set***' : 'not set',
     ];
+    if ($useMicrosoftGraph) {
+        $mailConfig['microsoft_sender_email'] = $optionService->getOption('microsoft_sender_email') ? '***set***' : 'not set';
+    }
+
+    $email = $request->input('email', 'bautistael23@gmail.com');
+    $subject = 'BaseCode Test Email';
+    $body = '<p>This is a test email. If you receive this, your email configuration is working correctly.</p>';
 
     try {
-        $email = $request->input('email', 'bautistael23@gmail.com');
-        $body = '<p>This is a test email. If you receive this, Microsoft Graph (options table config) is working correctly.</p>';
-        \App\Helpers\MicrosoftGraphHelper::sendEmail($email, 'BaseCode Test Email', $body);
+        if ($useMicrosoftGraph) {
+            \App\Helpers\MicrosoftGraphHelper::sendEmail($email, $subject, $body);
+            return response()->json([
+                'success' => true,
+                'message' => 'Test email sent successfully to ' . $email . ' via Microsoft Graph',
+                'mail_config' => $mailConfig,
+            ]);
+        }
 
+        // Use Laravel Mail (sendmail, smtp, log, etc.) with from address/name from options
+        \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $subject, $body) {
+            $message->to($email)->subject($subject)->html($body);
+        });
+
+        $driver = config('mail.default');
+        $message = 'Test email sent successfully to ' . $email;
+        if ($driver === 'log') {
+            $message .= ' (written to log – on Windows with sendmail selected, emails are logged only)';
+        }
         return response()->json([
             'success' => true,
-            'message' => 'Test email sent successfully to ' . $email . ' via Microsoft Graph (options config)',
-            'mail_config' => $mailConfig,
+            'message' => $message,
+            'mail_config' => array_merge($mailConfig, ['driver_used' => $driver]),
         ]);
     } catch (\Exception $e) {
         return response()->json([
