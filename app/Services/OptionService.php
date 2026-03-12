@@ -342,9 +342,16 @@ class OptionService extends BaseService
             if ($mailer === 'microsoft') {
                 $mailer = 'smtp'; // Use SMTP for Laravel Mail, Microsoft Graph handled separately
             }
-            // On Windows, sendmail is not available (/usr/sbin/sendmail); use log to avoid runtime errors
+            // On Windows, sendmail binary is not available; use SMTP if configured, otherwise log
             if ($mailer === 'sendmail' && PHP_OS_FAMILY === 'Windows') {
-                $mailer = 'log';
+                $smtpHost = $getConfig('mail_host', 'MAIL_HOST', '');
+                $smtpUser = $getConfig('mail_username', 'MAIL_USERNAME', '');
+                $smtpPass = $getConfig('mail_password', 'MAIL_PASSWORD', '');
+                if ($smtpHost && $smtpUser && $smtpPass) {
+                    $mailer = 'smtp';
+                } else {
+                    $mailer = 'log';
+                }
             }
 
             // Get from address and name
