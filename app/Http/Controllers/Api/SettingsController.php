@@ -61,7 +61,7 @@ class SettingsController extends BaseController
                 'data' => $settings
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to retrieve settings');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -109,7 +109,7 @@ class SettingsController extends BaseController
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to update settings');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -147,7 +147,7 @@ class SettingsController extends BaseController
                 ]
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to retrieve option');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -204,7 +204,7 @@ class SettingsController extends BaseController
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to update option');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -233,7 +233,7 @@ class SettingsController extends BaseController
                 'data' => $status
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to retrieve 2FA status');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -263,7 +263,7 @@ class SettingsController extends BaseController
                 'data' => $result
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to enable 2FA');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -293,7 +293,7 @@ class SettingsController extends BaseController
                 'data' => $result
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to disable 2FA');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -323,7 +323,7 @@ class SettingsController extends BaseController
                 'data' => $result
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to generate backup codes');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -438,7 +438,7 @@ class SettingsController extends BaseController
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to update general settings');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -466,7 +466,7 @@ class SettingsController extends BaseController
                 'data' => $settings
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to retrieve email settings');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -517,7 +517,7 @@ class SettingsController extends BaseController
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to update email settings');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -545,7 +545,7 @@ class SettingsController extends BaseController
                 'data' => $settings
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to retrieve security settings');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -591,7 +591,7 @@ class SettingsController extends BaseController
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to update security settings');
+            return $this->messageService->responseError($e);
         }
     }
 
@@ -619,7 +619,7 @@ class SettingsController extends BaseController
                 'message' => 'Default options initialized successfully'
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to initialize default options');
+            return $this->messageService->responseError($e);
         }
     }
 }
