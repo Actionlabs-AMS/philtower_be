@@ -188,6 +188,8 @@ class TicketRequestService extends BaseService
 
         $all = (clone $baseQuery)->count();
         $trashed = (clone $baseQuery)->onlyTrashed()->count();
+        $my = $user ? (clone $baseQuery)->where('assigned_to', $user->id)->count() : 0;
+        $unassigned = (clone $baseQuery)->whereNull('assigned_to')->count();
 
         $query = (clone $baseQuery)->with(['ticketStatus', 'serviceType', 'assignedTo']);
         if ($trash) {
@@ -240,12 +242,19 @@ class TicketRequestService extends BaseService
             }
         }
 
-        $assignedFilter = request('assigned');
-        if (is_string($assignedFilter) && $assignedFilter !== '') {
-            if ($assignedFilter === 'me' && $user) {
-                $query->where('assigned_to', $user->id);
-            } elseif ($assignedFilter === 'unassigned') {
-                $query->whereNull('assigned_to');
+        // Tab filters: assigned_to (user id), unassigned (1), or legacy assigned=me|unassigned
+        if (request()->filled('assigned_to')) {
+            $query->where('assigned_to', (int) request('assigned_to'));
+        } elseif (request('unassigned') === 1 || request('unassigned') === '1') {
+            $query->whereNull('assigned_to');
+        } else {
+            $assignedFilter = request('assigned');
+            if (is_string($assignedFilter) && $assignedFilter !== '') {
+                if ($assignedFilter === 'me' && $user) {
+                    $query->where('assigned_to', $user->id);
+                } elseif ($assignedFilter === 'unassigned') {
+                    $query->whereNull('assigned_to');
+                }
             }
         }
 
@@ -292,6 +301,8 @@ class TicketRequestService extends BaseService
             'meta' => [
                 'all' => $all,
                 'trashed' => $trashed,
+                'my' => $my,
+                'unassigned' => $unassigned,
             ],
         ]);
     }
