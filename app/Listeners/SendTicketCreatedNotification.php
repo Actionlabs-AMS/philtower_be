@@ -12,10 +12,10 @@ class SendTicketCreatedNotification implements ShouldQueue
     public function handle(TicketCreated $event): void
     {
         $ticket = $event->ticket;
-        $ticket->load(['assignedTo']);
+        $ticket->load(['user']);
 
-        if ($ticket->assigned_to && $ticket->assignedTo?->user_email) {
-            app(OptionService::class)->sendMailable($ticket->assignedTo->user_email, new TicketCreatedMail($ticket));
+        if ($ticket->user_id && $ticket->user?->user_email) {
+            app(OptionService::class)->sendMailable($ticket->user->user_email, new TicketCreatedMail($ticket));
         }
     }
 }
