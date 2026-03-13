@@ -3,9 +3,9 @@
 namespace App\Listeners;
 
 use App\Events\TicketClosed;
-use App\Helpers\MicrosoftGraphHelper;
 use App\Mail\TicketCsatMail;
 use App\Models\Support\TicketRequest;
+use App\Services\OptionService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Str;
 
@@ -25,6 +25,6 @@ class SendCsatSurvey implements ShouldQueue
             $ticket->refresh();
         }
 
-        MicrosoftGraphHelper::sendMailable($ticket->user->user_email, new TicketCsatMail($ticket));
+        app(OptionService::class)->sendMailable($ticket->user->user_email, new TicketCsatMail($ticket));
     }
 }

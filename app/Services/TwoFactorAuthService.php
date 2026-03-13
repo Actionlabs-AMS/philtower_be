@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\TwoFactorAuth;
-use App\Services\MicrosoftGraphService;
 use App\Services\OptionService;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -68,27 +67,26 @@ class TwoFactorAuthService
             // Generate new code
             $code = $twoFactorAuth->generateNewEmailCode();
 
-            $emailSent = false;
-            $lastError = null;
+            $subject = 'Two-Factor Authentication Code';
+            $userName = $user->user_login ?? $user->user_email ?? 'User';
+            $body = '<h2>Two-Factor Authentication Code</h2>'
+                . '<p>Hello ' . e($userName) . ',</p>'
+                . '<p>Your two-factor authentication code is:</p>'
+                . '<h1 style="color: #007bff; font-size: 32px; text-align: center; letter-spacing: 5px;">' . e($code) . '</h1>'
+                . '<p>This code will expire in 10 minutes.</p>'
+                . '<p>If you didn\'t request this code, please contact support immediately.</p>'
+                . '<p>Best regards,<br>The Team</p>';
 
             try {
-                MicrosoftGraphService::sendTwoFactorCodeEmail($user, $code);
-                $emailSent = true;
-                Log::info('2FA code sent via Microsoft Graph', [
-                    'user_id' => $user->id,
-                    'email' => $this->anonymizeEmail($user->user_email),
-                ]);
+                $this->optionService->sendEmail($user->user_email, $subject, $body);
             } catch (\Exception $e) {
                 $lastError = $e->getMessage();
-                Log::error('Microsoft Graph failed to send 2FA code', [
+                Log::error('Failed to send 2FA code email', [
                     'user_id' => $user->id,
                     'email' => $this->anonymizeEmail($user->user_email),
                     'error' => $lastError,
                     'trace' => $e->getTraceAsString(),
                 ]);
-            }
-
-            if (!$emailSent) {
                 return [
                     'success' => false,
                     'message' => 'Failed to send verification code. Please check your email configuration.',

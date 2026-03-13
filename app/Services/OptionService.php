@@ -4,7 +4,12 @@ namespace App\Services;
 
 use App\Models\Option;
 use App\Http\Resources\OptionResource;
+use App\Helpers\MicrosoftGraphHelper;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Mail\Mailable;
 
 class OptionService extends BaseService
 {
@@ -422,6 +427,97 @@ class OptionService extends BaseService
                 ],
             ];
         });
+    }
+
+    /**
+     * Apply email config from options (and .env fallback) to Laravel Config.
+     * Call this before sending mail so Mail:: uses OptionService settings (e.g. in queued jobs).
+     */
+    public function applyMailConfigFromDatabase(): void
+    {
+        try {
+            if (! Schema::hasTable('options')) {
+                return;
+            }
+            $mailConfig = $this->getEmailConfig();
+            if (isset($mailConfig['default'])) {
+                Config::set('mail.default', $mailConfig['default']);
+            }
+            if (isset($mailConfig['from'])) {
+                Config::set('mail.from', $mailConfig['from']);
+            }
+            if (isset($mailConfig['mailers'])) {
+                foreach ($mailConfig['mailers'] as $mailer => $config) {
+                    Config::set("mail.mailers.{$mailer}", $config);
+                }
+            }
+            if (isset($mailConfig['markdown'])) {
+                Config::set('mail.markdown', $mailConfig['markdown']);
+            }
+        } catch (\Throwable $e) {
+            // Fallback to config/mail.php (env) on error
+        }
+    }
+
+    /**
+     * Send a Mailable using OptionService email settings.
+     * Applies options config first, then: if mailer is "microsoft" and Graph is configured, uses
+     * Microsoft Graph; otherwise sends via Laravel Mail (SMTP/sendmail/log from options).
+     *
+     * @param  string|string[]  $to  Recipient email(s)
+     * @param  Mailable  $mailable
+     * @return bool True if sent successfully
+     */
+    public function sendMailable($to, Mailable $mailable): bool
+    {
+        $this->applyMailConfigFromDatabase();
+
+        $mailer = $this->getOption('mail_mailer', config('mail.default', 'smtp'));
+        $useMicrosoft = ($mailer === 'microsoft'
+            && $this->getOption('microsoft_tenant_id')
+            && $this->getOption('microsoft_sender_email'));
+
+        if ($useMicrosoft) {
+            return MicrosoftGraphHelper::sendMailable($to, $mailable);
+        }
+
+        $recipients = is_array($to) ? $to : [$to];
+        Mail::to($recipients)->send($mailable);
+        return true;
+    }
+
+    /**
+     * Send a plain email (subject + HTML body) using OptionService email settings.
+     * Applies options config first, then: if mailer is "microsoft" and Graph is configured,
+     * uses Microsoft Graph; otherwise sends via Laravel Mail (SMTP/sendmail/log from options).
+     *
+     * @param  string|string[]  $to  Recipient email(s)
+     * @param  string  $subject
+     * @param  string  $body  HTML body
+     * @param  array  $cc  CC addresses
+     * @return bool True if sent successfully
+     */
+    public function sendEmail($to, string $subject, string $body, array $cc = []): bool
+    {
+        $this->applyMailConfigFromDatabase();
+
+        $mailer = $this->getOption('mail_mailer', config('mail.default', 'smtp'));
+        $useMicrosoft = ($mailer === 'microsoft'
+            && $this->getOption('microsoft_tenant_id')
+            && $this->getOption('microsoft_sender_email'));
+
+        if ($useMicrosoft) {
+            return MicrosoftGraphHelper::sendEmail($to, $subject, $body, $cc);
+        }
+
+        $recipients = is_array($to) ? $to : [$to];
+        Mail::send([], [], function ($message) use ($recipients, $subject, $body, $cc) {
+            $message->to($recipients)->subject($subject)->html($body);
+            if (! empty($cc)) {
+                $message->cc($cc);
+            }
+        });
+        return true;
     }
 
     /**

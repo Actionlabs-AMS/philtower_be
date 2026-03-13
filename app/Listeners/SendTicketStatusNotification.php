@@ -3,9 +3,9 @@
 namespace App\Listeners;
 
 use App\Events\TicketStatusChanged;
-use App\Helpers\MicrosoftGraphHelper;
 use App\Mail\TicketForApprovalMail;
 use App\Mail\TicketResolvedMail;
+use App\Services\OptionService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
 class SendTicketStatusNotification implements ShouldQueue
@@ -14,6 +14,7 @@ class SendTicketStatusNotification implements ShouldQueue
     {
         $ticket = $event->ticket;
         $newCode = $ticket->ticketStatus?->code ?? null;
+        $optionService = app(OptionService::class);
 
         if ($newCode === 'for_approval') {
             $ticket->load(['assignedTo']);
@@ -21,7 +22,7 @@ class SendTicketStatusNotification implements ShouldQueue
                 ? $ticket->assignedTo->user_email
                 : null;
             if ($recipient) {
-                MicrosoftGraphHelper::sendMailable($recipient, new TicketForApprovalMail($ticket));
+                $optionService->sendMailable($recipient, new TicketForApprovalMail($ticket));
             }
             return;
         }
@@ -29,7 +30,7 @@ class SendTicketStatusNotification implements ShouldQueue
         if ($newCode === 'resolved') {
             $ticket->load(['user']);
             if ($ticket->user_id && $ticket->user?->user_email) {
-                MicrosoftGraphHelper::sendMailable($ticket->user->user_email, new TicketResolvedMail($ticket));
+                $optionService->sendMailable($ticket->user->user_email, new TicketResolvedMail($ticket));
             }
         }
     }
