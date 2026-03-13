@@ -355,7 +355,7 @@ class SettingsController extends BaseController
                 'data' => $settings
             ], 200);
         } catch (\Exception $e) {
-            return $this->messageService->responseError('Failed to retrieve general settings');
+            return $this->messageService->responseError($e);
         }
     }
 
