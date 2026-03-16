@@ -15,8 +15,8 @@
 </head>
 <body>
     <div class="container">
-        <h2>New Ticket Assigned</h2>
-        <p>A new support ticket has been created and assigned to you.</p>
+        <h2>New Ticket Created</h2>
+        <p>Your support ticket has been created successfully.</p>
         <div class="field"><span class="label">Ticket ID:</span> {{ $ticket->request_number ?? $ticket->id }}</div>
         <div class="field"><span class="label">Title/Description:</span> {{ Str::limit($ticket->description ?? '—', 100) }}</div>
         <div class="field"><span class="label">Status:</span> {{ $ticket->ticketStatus?->label ?? '—' }}</div>
