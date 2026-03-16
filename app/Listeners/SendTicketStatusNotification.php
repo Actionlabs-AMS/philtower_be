@@ -7,6 +7,7 @@ use App\Mail\TicketForApprovalMail;
 use App\Mail\TicketResolvedMail;
 use App\Mail\TicketApprovedMail;
 use App\Mail\TicketRejectedMail;
+use App\Mail\TicketClosedMail;
 use App\Models\User;
 use App\Services\OptionService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -59,6 +60,14 @@ class SendTicketStatusNotification implements ShouldQueue
             $ticket->loadMissing(['user']);
             if ($ticket->user_id && $ticket->user?->user_email) {
                 $optionService->sendMailable($ticket->user->user_email, new TicketResolvedMail($ticket));
+            }
+            return;
+        }
+
+        if ($newCode === 'closed') {
+            $ticket->loadMissing(['user', 'assignedTo', 'ticketStatus', 'serviceType']);
+            if ($ticket->user_id && $ticket->user?->user_email) {
+                $optionService->sendMailable($ticket->user->user_email, new TicketClosedMail($ticket));
             }
         }
     }
