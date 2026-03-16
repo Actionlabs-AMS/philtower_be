@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Http\Resources\UserResource;
 use App\Services\MicrosoftGraphService;
+use App\Services\OptionService;
 use App\Helpers\PasswordHelper;
 use Illuminate\Support\Facades\Log;
 
@@ -174,14 +175,39 @@ class UserService extends BaseService
           . "<p>{$verify_url}</p>"
           . "<p>Best regards,<br>The CorePanel Team</p>";
 
-      // Send email using Microsoft Graph
-      MicrosoftGraphService::sendNotificationEmail(
-        $user->user_email,
-        "Welcome to CorePanel - Verify Your Email",
-        $emailBody
-      );
-      
-      Log::info('[UserService] Verification email sent successfully', [
+      $subject = "Welcome to CorePanel - Verify Your Email";
+
+      // Prefer OptionService (centralized mail config, which may itself use Microsoft Graph)
+      try {
+        /** @var \App\Services\OptionService $optionService */
+        $optionService = app(OptionService::class);
+        $optionService->sendEmail($user->user_email, $subject, $emailBody);
+
+        Log::info('[UserService] Verification email sent via OptionService', [
+          'user_id' => $user->id,
+          'user_email' => $user->user_email,
+        ]);
+      } catch (\Throwable $inner) {
+        // Fallback to legacy Microsoft Graph service if OptionService fails
+        Log::warning('[UserService] OptionService failed for verification email, falling back to MicrosoftGraphService', [
+          'user_id' => $user->id,
+          'user_email' => $user->user_email,
+          'error' => $inner->getMessage(),
+        ]);
+
+        MicrosoftGraphService::sendNotificationEmail(
+          $user->user_email,
+          $subject,
+          $emailBody
+        );
+
+        Log::info('[UserService] Verification email sent via MicrosoftGraphService fallback', [
+          'user_id' => $user->id,
+          'user_email' => $user->user_email,
+        ]);
+      }
+
+      Log::info('[UserService] Verification email send process completed', [
         'user_id' => $user->id,
         'user_email' => $user->user_email
       ]);
@@ -228,14 +254,39 @@ class UserService extends BaseService
           . "<p>If you didn't request this password reset, please contact support immediately.</p>"
           . "<p>Best regards,<br>The CorePanel Team</p>";
 
-      // Send email using Microsoft Graph
-      MicrosoftGraphService::sendNotificationEmail(
-        $user->user_email,
-        "CorePanel - Temporary Password",
-        $emailBody
-      );
-      
-      Log::info('[UserService] Password reset email sent successfully', [
+      $subject = "CorePanel - Temporary Password";
+
+      // Prefer OptionService (centralized mail config)
+      try {
+        /** @var \App\Services\OptionService $optionService */
+        $optionService = app(OptionService::class);
+        $optionService->sendEmail($user->user_email, $subject, $emailBody);
+
+        Log::info('[UserService] Password reset email sent via OptionService', [
+          'user_id' => $user->id,
+          'user_email' => $user->user_email,
+        ]);
+      } catch (\Throwable $inner) {
+        // Fallback to legacy Microsoft Graph service if OptionService fails
+        Log::warning('[UserService] OptionService failed for password reset email, falling back to MicrosoftGraphService', [
+          'user_id' => $user->id,
+          'user_email' => $user->user_email,
+          'error' => $inner->getMessage(),
+        ]);
+
+        MicrosoftGraphService::sendNotificationEmail(
+          $user->user_email,
+          $subject,
+          $emailBody
+        );
+
+        Log::info('[UserService] Password reset email sent via MicrosoftGraphService fallback', [
+          'user_id' => $user->id,
+          'user_email' => $user->user_email,
+        ]);
+      }
+
+      Log::info('[UserService] Password reset email send process completed', [
         'user_id' => $user->id,
         'user_email' => $user->user_email
       ]);
