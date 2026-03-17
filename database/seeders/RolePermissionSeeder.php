@@ -140,6 +140,42 @@ class RolePermissionSeeder extends Seeder
             $this->command->info('✓ Agent permissions assigned (view, create, edit on ticket management & analytics)');
         }
 
+        // Technician: same as Agent — can_view, can_create, can_edit on ticket management, analytics, and dashboard
+        $technicianRole = $roles->get('Technician');
+        if ($technicianRole) {
+            $technicianPerms = ['can_view', 'can_create', 'can_edit'];
+            $technicianNavSlugs = [
+                'dashboard',
+                'profile',
+                'ticket-management',
+                'all-tickets',
+                'tickets-for-approval',
+                'analytics',
+                'analytics-dashboard',
+                'activity-logs',
+            ];
+            foreach ($technicianNavSlugs as $slug) {
+                $nav = $navsBySlug->get($slug);
+                if (!$nav) {
+                    continue;
+                }
+                foreach ($technicianPerms as $permName) {
+                    $permId = $permissionIds[$permName] ?? null;
+                    if ($permId) {
+                        RolePermission::updateOrCreate(
+                            [
+                                'role_id' => $technicianRole->id,
+                                'navigation_id' => $nav->id,
+                                'permission_id' => $permId,
+                            ],
+                            ['allowed' => true]
+                        );
+                    }
+                }
+            }
+            $this->command->info('✓ Technician permissions assigned (view, create, edit on ticket management & analytics)');
+        }
+
         // Requestor: can_view, can_create on my-request and help-center only
         $requestorRole = $roles->get('Requestor');
         if ($requestorRole) {

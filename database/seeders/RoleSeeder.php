@@ -10,7 +10,7 @@ class RoleSeeder extends Seeder
     /**
      * Run the database seeds.
      *
-     * Creates roles: Developer Account, Web Admin, Senior Team Lead, Team Lead, Service Desk, Employee.
+     * Creates roles: Developer Account, Web Admin, Approver, Agent, Technician, Requestor.
      */
     public function run(): void
     {
@@ -32,6 +32,11 @@ class RoleSeeder extends Seeder
             ],
             [
                 'name' => 'Agent',
+                'active' => true,
+                'is_super_admin' => false,
+            ],
+            [
+                'name' => 'Technician',
                 'active' => true,
                 'is_super_admin' => false,
             ],

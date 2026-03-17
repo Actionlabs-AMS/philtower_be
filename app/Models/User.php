@@ -170,7 +170,7 @@ class User extends Authenticatable
 
 	/**
 	 * Whether the user can see all tickets (vs. only assigned).
-	 * True if role is super admin or user has can_view_all meta set.
+	 * True if role is super admin, user has can_view_all meta set, or role has can_view on all-tickets navigation.
 	 */
 	public function canViewAllTickets(): bool
 	{
@@ -178,6 +178,21 @@ class User extends Authenticatable
 			return true;
 		}
 		$canViewAll = $this->getMeta('can_view_all');
-		return $canViewAll === true || $canViewAll === '1' || $canViewAll === 1;
+		if ($canViewAll === true || $canViewAll === '1' || $canViewAll === 1) {
+			return true;
+		}
+		// Check if the user's role has can_view on the all-tickets navigation
+		if ($this->role_id) {
+			$canViewPermission = Permission::where('name', 'can_view')->first();
+			$allTicketsNav = Navigation::where('slug', 'all-tickets')->first();
+			if ($canViewPermission && $allTicketsNav) {
+				return RolePermission::where('role_id', $this->role_id)
+					->where('navigation_id', $allTicketsNav->id)
+					->where('permission_id', $canViewPermission->id)
+					->where('allowed', true)
+					->exists();
+			}
+		}
+		return false;
 	}
 }
