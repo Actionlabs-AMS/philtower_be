@@ -121,7 +121,21 @@ class TicketRequestService extends BaseService
         $resource = parent::store($data);
         $model = $resource->resource;
         if ($model instanceof TicketRequest) {
+            $model->loadMissing(['ticketStatus']);
             event(new TicketCreated($model));
+
+            // If the ticket starts in a status that triggers notifications (e.g. for_approval),
+            // fire the status-changed event so status-based listeners run on creation too.
+            if ($model->ticketStatus?->code === 'for_approval') {
+                event(new TicketStatusChanged(
+                    $model,
+                    null,
+                    $model->ticketStatus?->label,
+                    null,
+                    (int) $model->ticket_status_id
+                ));
+            }
+
             // Fire TicketAssigned if assigned at creation time
             if ($model->assigned_to) {
                 event(new TicketAssigned($model));
