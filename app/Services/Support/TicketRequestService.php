@@ -12,6 +12,7 @@ use App\Events\TicketStatusChanged;
 use App\Models\Support\TicketRequest;
 use App\Models\Support\TicketStatus;
 use App\Models\Support\TicketUpdate;
+use App\Models\Support\SlaClock;
 use App\Models\User;
 use App\Services\BaseService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -109,6 +110,9 @@ class TicketRequestService extends BaseService
 
     public function store(array $data)
     {
+        if (!array_key_exists('created_by', $data)) {
+            $data['created_by'] = auth()->id();
+        }
         // Allow technicians to create tickets on behalf of a requester user
         if (isset($data['requester_user_id']) && $data['requester_user_id']) {
             $data['user_id'] = (int) $data['requester_user_id'];
@@ -205,7 +209,7 @@ class TicketRequestService extends BaseService
         $my = $user ? (clone $baseQuery)->where('assigned_to', $user->id)->count() : 0;
         $unassigned = (clone $baseQuery)->whereNull('assigned_to')->count();
 
-        $query = (clone $baseQuery)->with(['ticketStatus', 'serviceType', 'assignedTo']);
+        $query = (clone $baseQuery)->with(['ticketStatus', 'serviceType', 'assignedTo', 'createdBy']);
         if ($trash) {
             $query->onlyTrashed();
         }
@@ -323,7 +327,7 @@ class TicketRequestService extends BaseService
 
     public function show(int $id)
     {
-        $model = TicketRequest::withTrashed()->with(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo'])->findOrFail($id);
+        $model = TicketRequest::withTrashed()->with(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo', 'createdBy'])->findOrFail($id);
         return TicketRequestResource::make($model);
     }
 
@@ -356,6 +360,65 @@ class TicketRequestService extends BaseService
         $model->save();
         $model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']);
         event(new TicketStatusChanged($model, $oldLabel, $status->label, (int) $oldStatusId, $status->id));
+        return TicketRequestResource::make($model);
+    }
+
+    public function requestManualApproval(int $id, array $approverIds, string $reason, ?string $department = null)
+    {
+        $model = TicketRequest::with('ticketStatus')->findOrFail($id);
+        $oldLabel = $model->ticketStatus?->label ?? 'Unknown';
+        $oldStatusId = $model->ticket_status_id;
+
+        $pendingManualStatus = TicketStatus::where('code', 'pending_manual_approval')->first()
+            ?? TicketStatus::where('code', 'for_approval')->first();
+
+        $payload = [
+            'approver_ids' => array_values(array_unique(array_map('intval', $approverIds))),
+            'reason' => $reason,
+            'department' => $department,
+            'requested_by' => auth()->id(),
+            'requested_at' => now()->toIso8601String(),
+        ];
+
+        $model->for_approval = self::FOR_APPROVAL_YES;
+        $model->manual_approval_data = $payload;
+        if ($pendingManualStatus) {
+            $model->ticket_status_id = $pendingManualStatus->id;
+        }
+        $model->save();
+
+        // Pause active SLA clock while manual approval is pending.
+        $clock = SlaClock::query()
+            ->where('entity_type', 'ticket_request')
+            ->where('entity_id', $model->id)
+            ->whereNull('completed_at')
+            ->latest('id')
+            ->first();
+        if ($clock && $clock->paused_at === null) {
+            $clock->paused_at = now();
+            $clock->status = 'paused';
+            $clock->save();
+        }
+
+        TicketUpdate::create([
+            'ticket_request_id' => $model->id,
+            'user_id' => auth()->id() ?? $model->user_id,
+            'type' => TicketUpdate::TYPE_STATUS_CHANGE,
+            'content' => 'Manual approval requested: ' . $reason,
+            'metadata' => $payload,
+            'is_internal' => false,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        $model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo', 'createdBy']);
+        event(new TicketStatusChanged(
+            $model,
+            $oldLabel,
+            $model->ticketStatus?->label ?? 'Pending Manual Approval',
+            (int) $oldStatusId,
+            (int) $model->ticket_status_id
+        ));
         return TicketRequestResource::make($model);
     }
 
@@ -442,7 +505,7 @@ class TicketRequestService extends BaseService
         $all = (clone $baseQuery)->count();
         $trashed = (clone $baseQuery)->onlyTrashed()->count();
 
-        $query = TicketRequest::query()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'assignedTo']);
+        $query = TicketRequest::query()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'assignedTo', 'createdBy']);
         if ($trash) {
             $query->onlyTrashed();
         }
@@ -501,7 +564,7 @@ class TicketRequestService extends BaseService
      */
     public function showForUser(int $id, int $userId)
     {
-        $model = TicketRequest::withTrashed()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo'])->findOrFail($id);
+        $model = TicketRequest::withTrashed()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo', 'createdBy'])->findOrFail($id);
         return TicketRequestResource::make($model);
     }
 }

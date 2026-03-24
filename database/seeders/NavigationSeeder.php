@@ -143,6 +143,35 @@ class NavigationSeeder extends Seeder
                     ],
                 ],
             ],
+
+            // Knowledge Solutions
+            [
+                'name' => 'Knowledge Solutions',
+                'slug' => 'knowledge-solutions',
+                'icon' => 'book-open',
+                'description' => 'Centralized repository of approved technical solutions and knowledge entries',
+                'parent_id' => null,
+                'active' => true,
+                'show_in_menu' => true,
+                'children' => [
+                    [
+                        'name' => 'Knowledge Library',
+                        'slug' => 'knowledge-library',
+                        'icon' => 'book-open',
+                        'description' => 'Browse and search approved knowledge base entries',
+                        'active' => true,
+                        'show_in_menu' => true,
+                    ],
+                    [
+                        'name' => 'Pending KB Approval',
+                        'slug' => 'knowledge-pending',
+                        'icon' => 'clipboard-document-check',
+                        'description' => 'Review and approve or reject KB submissions',
+                        'active' => true,
+                        'show_in_menu' => true,
+                    ],
+                ],
+            ],
             
             // Analytics & Reports Section
             [

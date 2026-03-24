@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -40,6 +41,24 @@ class UserResource extends JsonResource
       $userRole->setAttribute('permissions', $permissions);
       $userRoutes = $userRole->getUserRoutes();
     }
+
+    $approverId = $this->getMeta('approver_id');
+    $approverName = null;
+    if (!empty($approverId)) {
+      $approver = User::find((int) $approverId);
+      if ($approver) {
+        $first = null;
+        $last = null;
+        try {
+          $first = $approver->getMeta('first_name');
+          $last = $approver->getMeta('last_name');
+        } catch (\Throwable $e) {
+          // Fallback to user_login when meta is unavailable.
+        }
+        $fullName = trim((string) ($first ?? '') . ' ' . (string) ($last ?? ''));
+        $approverName = $fullName !== '' ? $fullName : ($approver->user_login ?? null);
+      }
+    }
     
     return [
       'id' => $this->id,
@@ -60,6 +79,8 @@ class UserResource extends JsonResource
       'user_role_name' => ($userRole) ? $userRole->name : 'Unassigned',
       'role_name' => ($userRole) ? $userRole->name : 'Unassigned', // Added for frontend table
       'role_id' => $this->role_id, // Added for frontend
+      'approver_id' => !empty($approverId) ? (int) $approverId : null,
+      'approver_name' => $approverName,
       'theme' => $this->user_details['theme'] ?? null,
       'user_status' => $this->user_status, // Return numeric status for badge logic
       'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),

@@ -13,6 +13,7 @@ class TicketUpdate extends Model
 
     protected $fillable = [
         'ticket_request_id',
+        'parent_update_id',
         'user_id',
         'content',
         'type',
@@ -79,5 +80,15 @@ class TicketUpdate extends Model
     public function author()
     {
         return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(self::class, 'parent_update_id');
+    }
+
+    public function replies()
+    {
+        return $this->hasMany(self::class, 'parent_update_id')->orderBy('created_at', 'asc');
     }
 }

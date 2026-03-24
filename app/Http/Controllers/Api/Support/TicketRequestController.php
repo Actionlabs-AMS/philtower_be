@@ -11,6 +11,8 @@ use App\Http\Requests\UpdateTicketRequestRequest;
 use App\Services\MediaService;
 use App\Services\Support\TicketRequestService;
 use App\Services\MessageService;
+use App\Models\User;
+use App\Models\Support\TicketRelationship;
 
 /**
  * All Tickets: ticket_requests CRUD. Soft deletes, bulk actions.
@@ -263,5 +265,76 @@ class TicketRequestController extends BaseController
             }
             return $this->messageService->responseError($e);
         }
+    }
+
+    public function requestApproval(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'approver_ids' => ['required', 'array', 'min:1'],
+                'approver_ids.*' => ['integer', 'exists:users,id'],
+                'reason' => ['required', 'string', 'min:5'],
+                'department' => ['nullable', 'string', 'max:100'],
+            ]);
+
+            $approverCount = User::query()
+                ->whereIn('id', $validated['approver_ids'])
+                ->whereHas('role', fn ($q) => $q->whereRaw('LOWER(name) = ?', ['approver']))
+                ->count();
+            if ($approverCount !== count($validated['approver_ids'])) {
+                return response()->json([
+                    'message' => 'All selected users must have the Approver role.',
+                    'status' => false,
+                    'status_code' => 422,
+                ], 422);
+            }
+
+            $resource = $this->service->requestManualApproval(
+                (int) $id,
+                $validated['approver_ids'],
+                $validated['reason'],
+                $validated['department'] ?? null
+            );
+            return response()->json($resource, 200);
+        } catch (\Exception $e) {
+            return $this->messageService->responseError($e);
+        }
+    }
+
+    public function relationships($id)
+    {
+        $items = TicketRelationship::query()
+            ->where('source_ticket_id', (int) $id)
+            ->with('targetTicket:id,request_number')
+            ->get();
+        return response()->json(['data' => $items]);
+    }
+
+    public function createRelationship(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'target_ticket_id' => ['required', 'integer', 'exists:ticket_requests,id'],
+            'relationship_type' => ['required', 'string', 'in:duplicate_of,parent_of,child_of,relates_to'],
+        ]);
+        if ((int) $id === (int) $validated['target_ticket_id']) {
+            return response()->json(['message' => 'Cannot relate a ticket to itself.'], 422);
+        }
+        $item = TicketRelationship::create([
+            'source_ticket_id' => (int) $id,
+            'target_ticket_id' => (int) $validated['target_ticket_id'],
+            'relationship_type' => $validated['relationship_type'],
+            'created_by' => auth()->id(),
+        ]);
+        return response()->json(['data' => $item], 201);
+    }
+
+    public function deleteRelationship($id, $relationshipId)
+    {
+        $item = TicketRelationship::query()
+            ->where('source_ticket_id', (int) $id)
+            ->where('id', (int) $relationshipId)
+            ->firstOrFail();
+        $item->delete();
+        return response()->json(['message' => 'Relationship removed.']);
     }
 }

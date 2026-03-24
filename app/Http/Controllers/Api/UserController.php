@@ -494,6 +494,9 @@ class UserController extends BaseController
       if (isset($request->can_view_all)) {
         $meta_details['can_view_all'] = $request->boolean('can_view_all') ? '1' : '0';
       }
+      if ($request->has('approver_id')) {
+        $meta_details['approver_id'] = $request->filled('approver_id') ? (string) ((int) $request->approver_id) : null;
+      }
 
       if(isset($request->user_role)) {
         // Handle user_role as object or array - convert to JSON string for user_meta
@@ -638,6 +641,9 @@ class UserController extends BaseController
     
       if (isset($request->can_view_all)) {
         $meta_details['can_view_all'] = $request->boolean('can_view_all') ? '1' : '0';
+      }
+      if ($request->has('approver_id')) {
+        $meta_details['approver_id'] = $request->filled('approver_id') ? (string) ((int) $request->approver_id) : null;
       }
 
       if(isset($request->user_role)) {

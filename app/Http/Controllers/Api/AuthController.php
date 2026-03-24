@@ -367,6 +367,7 @@ class AuthController extends Controller
 	{
 		$credentials = $request->validated();
 		$ip = $request->ip();
+		$password = (string) ($credentials['password'] ?? '');
 
 		// Get max login attempts and lockout duration from database settings
 		$maxLoginAttempts = (int) $this->optionService->getOption('max_login_attempts', 5);
@@ -522,30 +523,12 @@ class AuthController extends Controller
 			], 403);
 		}
 		
-		// Verify password
-		// Debug logging for password verification
-		\Log::info('[AuthController] Password verification attempt:', [
-			'user_id' => $user->id,
-			'email' => $credentials['email'],
-			'password_length' => strlen($credentials['password']),
-			'password_preview' => substr($credentials['password'], 0, 3) . '...',
-			'has_salt' => !empty($user->user_salt),
-			'has_hash' => !empty($user->user_pass),
-			'salt_length' => strlen($user->user_salt ?? ''),
-		]);
-		
-		if (!PasswordHelper::verifyPassword($credentials['password'], $user->user_salt, $user->user_pass)) {
+		// Guard against malformed or suspiciously short input before hash verification.
+		// This closes off partial-password attempts and avoids expensive hash checks.
+		$minimumLoginPasswordLength = 8;
+		if (strlen($password) < $minimumLoginPasswordLength || !PasswordHelper::verifyPassword($password, $user->user_salt, $user->user_pass)) {
 			// Increment rate limiter
 			RateLimiter::hit('login:' . $ip, $lockoutDurationSeconds);
-
-			// Log failed login attempt with more details
-			\Log::warning('[AuthController] Password verification failed:', [
-				'user_id' => $user->id,
-				'email' => $credentials['email'],
-				'password_received_length' => strlen($credentials['password']),
-				'user_salt_length' => strlen($user->user_salt ?? ''),
-				'user_hash_length' => strlen($user->user_pass ?? ''),
-			]);
 
 			$this->logAction(
 				'AUTHENTICATION',

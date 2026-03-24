@@ -14,6 +14,7 @@ class TicketRequest extends Model
     protected $fillable = [
         'request_number',
         'user_id',
+        'created_by',
         'parent_ticket_id',
         'service_type_id',
         'description',
@@ -24,6 +25,7 @@ class TicketRequest extends Model
         'ticket_status_id',
         'slas_id',
         'for_approval',
+        'manual_approval_data',
         'assigned_to',
         'submitted_at',
         'resolved_at',
@@ -32,6 +34,7 @@ class TicketRequest extends Model
 
     protected $casts = [
         'attachment_metadata' => 'array',
+        'manual_approval_data' => 'array',
         'submitted_at' => 'datetime',
         'resolved_at' => 'datetime',
         'closed_at' => 'datetime',
@@ -66,8 +69,12 @@ class TicketRequest extends Model
     public static function generateRequestNumber(): string
     {
         $prefix = 'TR';
-        $date = now()->format('Ymd');
-        $random = strtoupper(substr(uniqid(), -6));
+        $date = now()->format('Ym');
+        $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $random = '';
+        for ($i = 0; $i < 6; $i++) {
+            $random .= $chars[random_int(0, strlen($chars) - 1)];
+        }
         return $prefix . '-' . $date . '-' . $random;
     }
 
@@ -94,6 +101,11 @@ class TicketRequest extends Model
     public function assignedTo()
     {
         return $this->belongsTo(\App\Models\User::class, 'assigned_to');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
     }
 
     /**

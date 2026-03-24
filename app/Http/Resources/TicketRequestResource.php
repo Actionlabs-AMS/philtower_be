@@ -18,6 +18,7 @@ class TicketRequestResource extends JsonResource
             'id' => $this->id,
             'request_number' => $this->request_number,
             'user_id' => $this->user_id,
+            'created_by' => $this->created_by,
             'parent_ticket_id' => $this->parent_ticket_id,
             'service_type_id' => $this->service_type_id,
             'description' => $this->description,
@@ -37,6 +38,9 @@ class TicketRequestResource extends JsonResource
             'updated_at' => $this->updated_at?->toIso8601String(),
             'last_updated_at_human' => $this->updated_at?->format('M j, Y g:i A'),
             'deleted_at' => $this->deleted_at?->toIso8601String(),
+            'sla_breached' => (bool) $this->slaClocks()
+                ->where('status', 'breached')
+                ->exists(),
             // Flat labels for list/table (when relations loaded)
             'ticket_status_label' => $this->whenLoaded('ticketStatus', fn () => $this->ticketStatus?->label),
             'service_type_name' => $this->whenLoaded('serviceType', fn () => $this->serviceType?->name),
@@ -57,6 +61,24 @@ class TicketRequestResource extends JsonResource
                     // Fall through to user_login
                 }
                 return $this->assignedTo->user_login ?? null;
+            }),
+            'created_by_name' => $this->whenLoaded('createdBy', function () {
+                if (! $this->createdBy) {
+                    return null;
+                }
+                try {
+                    if (method_exists($this->createdBy, 'getMeta')) {
+                        $first = $this->createdBy->getMeta('first_name');
+                        $last = $this->createdBy->getMeta('last_name');
+                        $name = trim(($first ?? '') . ' ' . ($last ?? ''));
+                        if ($name !== '') {
+                            return $name;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Fall through to user_login
+                }
+                return $this->createdBy->user_login ?? null;
             }),
             // Optional loaded relations (for forms/detail)
             'ticket_status' => $this->whenLoaded('ticketStatus', fn () => $this->ticketStatus ? [

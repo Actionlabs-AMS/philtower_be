@@ -14,6 +14,7 @@ class TicketUpdateResource extends JsonResource
         return [
             'id' => $this->id,
             'ticket_request_id' => $this->ticket_request_id,
+            'parent_update_id' => $this->parent_update_id,
             'user_id' => $this->user_id,
             'content' => $this->content,
             'type' => $this->type,
@@ -34,6 +35,7 @@ class TicketUpdateResource extends JsonResource
             }),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+            'replies' => TicketUpdateResource::collection($this->whenLoaded('replies')),
         ];
     }
 }

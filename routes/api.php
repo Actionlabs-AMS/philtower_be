@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\Support\TicketStatusController;
 use App\Http\Controllers\Api\Support\SlaController;
 use App\Http\Controllers\Api\Support\TicketRequestController;
 use App\Http\Controllers\Api\Support\TicketUpdateController;
+use App\Http\Controllers\Api\Support\KnowledgeBaseController;
 use App\Http\Controllers\Api\Support\MyRequestController;
 
 /*
@@ -184,6 +185,10 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::delete('/force-delete/{id}', [TicketRequestController::class, 'forceDelete']);
 		Route::post('/approve/{id}', [TicketRequestController::class, 'approve']);
 		Route::post('/reject/{id}', [TicketRequestController::class, 'reject']);
+		Route::post('/{id}/request-approval', [TicketRequestController::class, 'requestApproval']);
+		Route::get('/{id}/relationships', [TicketRequestController::class, 'relationships']);
+		Route::post('/{id}/relationships', [TicketRequestController::class, 'createRelationship']);
+		Route::delete('/{id}/relationships/{relationshipId}', [TicketRequestController::class, 'deleteRelationship']);
 		Route::post('/{id}/reassign', [TicketRequestController::class, 'reassign']);
 		Route::get('/{id}/updates', [TicketUpdateController::class, 'index']);
 		Route::post('/{id}/updates', [TicketUpdateController::class, 'store']);
@@ -191,6 +196,14 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::put('/{id}', [TicketRequestController::class, 'update']);
 		Route::delete('/{id}', [TicketRequestController::class, 'destroy']);
 	});
+
+	Route::prefix('knowledge-base')->group(function () {
+		Route::get('/', [KnowledgeBaseController::class, 'index']);
+		Route::get('/pending', [KnowledgeBaseController::class, 'pending']);
+		Route::post('/{id}/approve', [KnowledgeBaseController::class, 'approve']);
+		Route::post('/{id}/reject', [KnowledgeBaseController::class, 'reject']);
+	});
+	Route::patch('/ticket-management/all-tickets/{ticketId}/updates/{updateId}/tag-kb', [KnowledgeBaseController::class, 'tagFromUpdate']);
 
 	// Service Catalog - SLA & Timing
 	Route::prefix('service-catalog/sla-timing')->group(function () {

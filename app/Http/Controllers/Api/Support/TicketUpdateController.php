@@ -22,8 +22,9 @@ class TicketUpdateController
 
         $perPage = (int) request('per_page', 50);
         $updates = TicketUpdate::where('ticket_request_id', $id)
-            ->with('author')
-            ->orderByDesc('created_at')
+            ->whereNull('parent_update_id')
+            ->with(['author', 'replies.author'])
+            ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
         return TicketUpdateResource::collection($updates)->response();
@@ -43,7 +44,15 @@ class TicketUpdateController
             'content' => 'required|string|max:65535',
             'type' => 'nullable|string|in:comment,status_change,note',
             'is_internal' => 'nullable|boolean',
+            'parent_update_id' => 'nullable|integer|exists:ticket_updates,id',
         ]);
+
+        if (!empty($validated['parent_update_id'])) {
+            $parent = TicketUpdate::find($validated['parent_update_id']);
+            if (!$parent || (int) $parent->ticket_request_id !== (int) $id) {
+                return response()->json(['message' => 'Invalid parent update for this ticket.'], 422);
+            }
+        }
 
         $validated['ticket_request_id'] = $id;
         $validated['type'] = $validated['type'] ?? TicketUpdate::TYPE_COMMENT;
