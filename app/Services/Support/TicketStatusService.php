@@ -35,8 +35,14 @@ class TicketStatusService extends BaseService
             });
         }
 
-        $orderField = request('order', 'code');
-        $sortDir = request('sort', 'asc');
+        $requestedOrder = (string) request('order', 'code');
+        $requestedSort = strtolower((string) request('sort', 'asc'));
+        $sortDir = in_array($requestedSort, ['asc', 'desc'], true) ? $requestedSort : 'asc';
+
+        // ticket_statuses has no created_at/updated_at columns
+        $allowedOrderFields = ['id', 'code', 'label', 'is_closed', 'is_on_hold', 'deleted_at'];
+        $orderField = in_array($requestedOrder, $allowedOrderFields, true) ? $requestedOrder : 'code';
+
         $query->orderBy($orderField, $sortDir);
 
         return TicketStatusResource::collection(
