@@ -96,7 +96,7 @@ class TicketAnalyticsService
     private function buildTicketDetailsTable($baseQuery): array
     {
         $tickets = (clone $baseQuery)
-            ->with(['ticketStatus', 'serviceType.parent', 'createdBy', 'slaClocks' => fn ($q) => $q->orderBy('id')->limit(1)])
+            ->with(['ticketStatus', 'serviceType.parent', 'createdBy', 'slaClocks' => fn ($q) => $q->orderBy('id')])
             ->orderBy('created_at', 'desc')
             ->get();
 
