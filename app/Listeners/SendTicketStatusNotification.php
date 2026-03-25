@@ -38,6 +38,33 @@ class SendTicketStatusNotification implements ShouldQueue
             return;
         }
 
+        if ($newCode === 'pending_manual_approval') {
+            // Notify only the explicitly selected approvers from manual_approval_data.
+            $manual = $ticket->manual_approval_data ?? [];
+            $approverIds = is_array($manual) ? ($manual['approver_ids'] ?? []) : [];
+            $approverIds = is_array($approverIds) ? array_values(array_unique(array_map('intval', $approverIds))) : [];
+
+            if (!empty($approverIds)) {
+                $approverEmails = User::query()
+                    ->whereIn('id', $approverIds)
+                    ->whereHas('role', function ($query) {
+                        $query->where('name', 'Approver')->where('active', true);
+                    })
+                    ->whereNotNull('user_email')
+                    ->pluck('user_email')
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                if (!empty($approverEmails)) {
+                    $ticket->loadMissing(['assignedTo', 'user', 'ticketStatus', 'serviceType']);
+                    $optionService->sendMailable($approverEmails, new TicketForApprovalMail($ticket));
+                }
+            }
+
+            return;
+        }
+
         if ($newCode === 'approved') {
             // Notify requester that the ticket has been approved
             $ticket->loadMissing(['user', 'assignedTo', 'ticketStatus', 'serviceType']);

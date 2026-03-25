@@ -29,6 +29,7 @@ class TicketRequestResource extends JsonResource
             'ticket_status_id' => $this->ticket_status_id,
             'slas_id' => $this->slas_id,
             'for_approval' => $this->for_approval,
+            'manual_approval_data' => $this->manual_approval_data,
             'assigned_to' => $this->assigned_to,
             'submitted_at' => $this->submitted_at?->toIso8601String(),
             'resolved_at' => $this->resolved_at?->toIso8601String(),

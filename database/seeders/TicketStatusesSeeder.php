@@ -21,6 +21,7 @@ class TicketStatusesSeeder extends Seeder
             ['code' => 'resolved', 'label' => 'Resolved', 'is_closed' => false, 'is_on_hold' => false],
             ['code' => 'closed', 'label' => 'Closed', 'is_closed' => true, 'is_on_hold' => false],
             ['code' => 'for_approval', 'label' => 'For Approval', 'is_closed' => false, 'is_on_hold' => false],
+            ['code' => 'pending_manual_approval', 'label' => 'Pending Manual Approval', 'is_closed' => false, 'is_on_hold' => true],
             ['code' => 'approved', 'label' => 'Approved', 'is_closed' => false, 'is_on_hold' => false],
             ['code' => 'rejected', 'label' => 'Rejected', 'is_closed' => true, 'is_on_hold' => false],
         ];
