@@ -72,6 +72,36 @@ class UserController extends BaseController
   }
 
   /**
+   * Dedicated endpoint for users who have the Approver role only.
+   *
+   * @OA\Get(
+   *   path="/api/user-management/users/approvers",
+   *   summary="Get approvers only",
+   *   tags={"User Management"},
+   *   security={{"sanctum": {}}},
+   *   @OA\Parameter(
+   *     name="per_page",
+   *     in="query",
+   *     description="Items per page",
+   *     required=false,
+   *     @OA\Schema(type="integer", example=1000)
+   *   ),
+   *   @OA\Response(
+   *     response=200,
+   *     description="Approvers retrieved successfully"
+   *   )
+   * )
+   */
+  public function approvers(Request $request)
+  {
+    // UserService::list uses request('role_name') to filter by role.
+    $request->merge(['role_name' => 'Approver']);
+    $perPage = (int) ($request->input('per_page', 10));
+
+    return $this->service->list($perPage, false);
+  }
+
+  /**
    * Display the specified user.
    * 
    * @OA\Get(

@@ -235,6 +235,8 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::prefix('users')->group(function () {
 			// Standard CRUD operations
 			Route::get('/', [UserController::class, 'index']);  // Retrieve all users
+			// Dedicated endpoint for designated approvers only (must be before `/{id}` route).
+			Route::get('/approvers', [UserController::class, 'approvers']);
 			Route::get('/{id}', [UserController::class, 'show']);  // Retrieve a user
 			Route::post('/', [UserController::class, 'store']);  // Create a new user
 			Route::put('/{id}', [UserController::class, 'update']);  // Update an existing user

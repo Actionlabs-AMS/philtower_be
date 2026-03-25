@@ -22,7 +22,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "email" => "required|email|exists:users,user_email",
+            // Keep login response generic in controller; avoid existence checks in request validation.
+            "email" => "required|email",
             "password" => 'required',
             "remember_me" => "sometimes|boolean",
         ];
