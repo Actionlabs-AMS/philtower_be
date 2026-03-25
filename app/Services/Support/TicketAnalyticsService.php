@@ -96,13 +96,15 @@ class TicketAnalyticsService
     private function buildTicketDetailsTable($baseQuery): array
     {
         $tickets = (clone $baseQuery)
-            ->with(['ticketStatus', 'serviceType', 'createdBy', 'slaClocks' => fn ($q) => $q->orderBy('id')->limit(1)])
+            ->with(['ticketStatus', 'serviceType.parent', 'createdBy', 'slaClocks' => fn ($q) => $q->orderBy('id')->limit(1)])
             ->orderBy('created_at', 'desc')
             ->get();
 
         $rows = [];
         foreach ($tickets as $t) {
             $clock = $t->slaClocks->first();
+            $st = $t->serviceType;
+            $isChildType = $st && $st->parent_id !== null;
             $rows[] = [
                 'id' => $t->id,
                 'request_number' => $t->request_number,
@@ -110,7 +112,12 @@ class TicketAnalyticsService
                 'created_by' => $t->created_by,
                 'created_by_name' => $t->createdBy?->user_login,
                 'service_type_id' => $t->service_type_id,
-                'service_type_name' => $t->serviceType?->name,
+                // Preserve existing field used by the UI, but also provide category/sub-category split for exports.
+                'service_type_name' => $st?->name,
+                'service_category' => $st
+                    ? ($isChildType ? ($st->parent?->name ?? null) : ($st->name ?? null))
+                    : null,
+                'service_sub_category' => $isChildType ? ($st->name ?? null) : null,
                 'description' => $t->description,
                 'contact_name' => $t->contact_name,
                 'contact_email' => $t->contact_email,
