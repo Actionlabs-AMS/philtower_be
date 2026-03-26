@@ -22,7 +22,7 @@ class ImportUsersRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => 'required|file|mimes:csv,txt|max:10240', // 10MB max
+            'file' => 'required|file|mimes:csv,txt,xlsx,xls|max:10240', // 10MB max
         ];
     }
 
@@ -36,7 +36,7 @@ class ImportUsersRequest extends FormRequest
         return [
             'file.required' => 'The file field is required.',
             'file.file' => 'The file must be a valid file.',
-            'file.mimes' => 'The file must be a file of type: csv, txt.',
+            'file.mimes' => 'The file must be a file of type: csv, txt, xlsx, xls.',
             'file.max' => 'The file may not be greater than 10240 kilobytes (10MB).',
         ];
     }

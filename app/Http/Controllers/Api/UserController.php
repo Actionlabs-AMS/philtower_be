@@ -11,8 +11,11 @@ use App\Helpers\PasswordHelper;
 use App\Services\UserService;
 use App\Services\MessageService;
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\UserResource;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 /**
  * @OA\Tag(
@@ -1005,7 +1008,6 @@ class UserController extends BaseController
     try {
 
       $file = $request->file('file');
-      
       if (!$file || !$file->isValid()) {
         return response()->json([
           'message' => 'Invalid file upload',
@@ -1013,187 +1015,270 @@ class UserController extends BaseController
         ], 422);
       }
 
+      $extension = strtolower($file->getClientOriginalExtension());
       $imported = 0;
       $skipped = 0;
       $errors = [];
+      $totalProcessed = 0;
 
-      // Read CSV file
-      $handle = fopen($file->getRealPath(), 'r');
-      
-      if ($handle === false) {
-        return response()->json([
-          'message' => 'Failed to read CSV file',
-          'errors' => ['file' => ['Could not open the CSV file.']]
-        ], 422);
-      }
-
-      // Read header row
-      $headers = fgetcsv($handle);
-      
-      if ($headers === false || empty($headers)) {
-        fclose($handle);
-        return response()->json([
-          'message' => 'Invalid CSV format',
-          'errors' => ['file' => ['The CSV file is empty or has invalid format.']]
-        ], 422);
-      }
-
-      // Normalize headers (trim whitespace, lowercase)
-      $headers = array_map(function($header) {
-        return trim(strtolower($header));
-      }, $headers);
-
-      // Expected columns mapping
-      $columnMap = [
-        'username' => 'user_login',
-        'email' => 'user_email',
-        'password' => 'user_pass',
-        'first name' => 'first_name',
-        'last name' => 'last_name',
-        'employee id' => 'employee_id',
-        'position' => 'position',
-        'role id' => 'role_id',
-        'status' => 'user_status',
-      ];
-
-      $rowNumber = 1; // Start from 1 (header is row 0)
-
-      // Process each row
-      while (($row = fgetcsv($handle)) !== false) {
-        $rowNumber++;
-        
-        // Skip empty rows
-        if (empty(array_filter($row))) {
-          continue;
+      $parseStatus = function ($statusValue): int {
+        if ($statusValue === null || $statusValue === '') {
+          return 1;
         }
 
-        try {
-          // Map CSV columns to data array
-          $data = [];
-          foreach ($headers as $index => $header) {
-            $value = isset($row[$index]) ? trim($row[$index]) : '';
-            
-            // Skip comments (lines starting with #)
-            if (strpos($value, '#') === 0) {
-              continue 2; // Skip to next row
-            }
+        $normalized = strtolower(trim((string) $statusValue));
+        if (is_numeric($normalized)) {
+          $statusCode = (int) $normalized;
+          return in_array($statusCode, [0, 1, 2], true) ? $statusCode : 1;
+        }
 
-            // Map header to field name
+        if (in_array($normalized, ['active', 'regular'], true)) {
+          return 1;
+        }
+
+        if ($normalized === 'suspended') {
+          return 2;
+        }
+
+        return 0;
+      };
+
+      $normalizeLogin = function (string $value): string {
+        $clean = preg_replace('/[^a-z0-9._-]/i', '', strtolower(trim($value)));
+        return trim((string) $clean, '.-_');
+      };
+
+      $createUserFromData = function (array $data, int $rowNumber) use (&$imported, &$skipped, &$errors, $parseStatus, $normalizeLogin) {
+        $email = trim((string) ($data['user_email'] ?? ''));
+        $username = trim((string) ($data['user_login'] ?? ''));
+
+        if ($username === '' && $email !== '') {
+          $emailPrefix = explode('@', $email)[0] ?? '';
+          $username = $normalizeLogin($emailPrefix);
+        }
+
+        if ($username === '' && (!empty($data['first_name']) || !empty($data['last_name']))) {
+          $fallback = trim((string) (($data['first_name'] ?? '') . '.' . ($data['last_name'] ?? '')), '.');
+          $username = $normalizeLogin($fallback);
+        }
+
+        $data['user_login'] = $username;
+        $data['user_email'] = $email;
+
+        if (empty($data['user_login']) || empty($data['user_email'])) {
+          $skipped++;
+          $errors[] = [
+            'row' => $rowNumber,
+            'message' => 'Missing required fields: Username and Email are required',
+            'data' => $data
+          ];
+          return;
+        }
+
+        $existingUser = User::where('user_login', $data['user_login'])
+          ->orWhere('user_email', $data['user_email'])
+          ->first();
+
+        if ($existingUser) {
+          $skipped++;
+          $errors[] = [
+            'row' => $rowNumber,
+            'message' => 'User already exists: ' . ($existingUser->user_login === $data['user_login'] ? 'Username' : 'Email') . ' already in use',
+            'data' => $data
+          ];
+          return;
+        }
+
+        $salt = PasswordHelper::generateSalt();
+        $plainPassword = !empty($data['user_pass'])
+          ? (string) $data['user_pass']
+          : PasswordHelper::generateTemporaryPassword();
+        $hashedPassword = PasswordHelper::generatePassword($salt, $plainPassword);
+        $activation_key = PasswordHelper::generateSalt();
+
+        $userData = [
+          'user_login' => $data['user_login'],
+          'user_email' => $data['user_email'],
+          'user_salt' => $salt,
+          'user_pass' => $hashedPassword,
+          'user_status' => $parseStatus($data['user_status'] ?? null),
+          'user_activation_key' => $activation_key,
+        ];
+
+        $meta_details = [];
+        foreach ([
+          'first_name',
+          'last_name',
+          'employee_id',
+          'position',
+          'division',
+          'project_name',
+          'start_date',
+          'outsourcing_agency',
+          'cost_center',
+          'licenses',
+          'alt_email',
+        ] as $metaKey) {
+          if (!empty($data[$metaKey])) {
+            $meta_details[$metaKey] = $data[$metaKey];
+          }
+        }
+
+        $roleName = trim((string) ($data['role_name'] ?? ''));
+        if ($roleName !== '') {
+          $role = Role::whereRaw('LOWER(name) = ?', [strtolower($roleName)])->first();
+          if ($role) {
+            $meta_details['user_role'] = json_encode(['id' => (int) $role->id, 'name' => $role->name]);
+            $userData['role_id'] = (int) $role->id;
+          } else {
+            $errors[] = [
+              'row' => $rowNumber,
+              'message' => "Role '{$roleName}' not found. User was imported without role assignment.",
+              'data' => $data
+            ];
+          }
+        } elseif (!empty($data['role_id'])) {
+          $meta_details['user_role'] = json_encode(['id' => (int) $data['role_id']]);
+          $userData['role_id'] = (int) $data['role_id'];
+        }
+
+        $originalPassword = request('user_pass');
+        request()->merge(['user_pass' => $plainPassword]);
+
+        try {
+          $user = $this->service->storeWithMeta($userData, $meta_details);
+          if ($user) {
+            $imported++;
+          } else {
+            $skipped++;
+            $errors[] = [
+              'row' => $rowNumber,
+              'message' => 'Failed to create user',
+              'data' => $data
+            ];
+          }
+        } finally {
+          if ($originalPassword !== null) {
+            request()->merge(['user_pass' => $originalPassword]);
+          } else {
+            request()->offsetUnset('user_pass');
+          }
+        }
+      };
+
+      if (in_array($extension, ['xlsx', 'xls'], true)) {
+        $spreadsheet = IOFactory::load($file->getRealPath());
+        $worksheet = $spreadsheet->getActiveSheet();
+        $highestRow = (int) $worksheet->getHighestDataRow();
+
+        for ($rowNumber = 2; $rowNumber <= $highestRow; $rowNumber++) {
+          $totalProcessed++;
+          $startDateCell = $worksheet->getCellByColumnAndRow(7, $rowNumber);
+          $rawStartDate = $startDateCell->getValue();
+
+          $rowData = [
+            'last_name' => trim((string) $worksheet->getCellByColumnAndRow(2, $rowNumber)->getFormattedValue()),
+            'first_name' => trim((string) $worksheet->getCellByColumnAndRow(3, $rowNumber)->getFormattedValue()),
+            'position' => trim((string) $worksheet->getCellByColumnAndRow(4, $rowNumber)->getFormattedValue()),
+            'division' => trim((string) $worksheet->getCellByColumnAndRow(5, $rowNumber)->getFormattedValue()),
+            'project_name' => trim((string) $worksheet->getCellByColumnAndRow(6, $rowNumber)->getFormattedValue()),
+            'start_date' => is_numeric($rawStartDate) ? ExcelDate::excelToDateTimeObject($rawStartDate)->format('Y-m-d') : trim((string) $startDateCell->getFormattedValue()),
+            'user_status' => trim((string) $worksheet->getCellByColumnAndRow(8, $rowNumber)->getFormattedValue()),
+            'outsourcing_agency' => trim((string) $worksheet->getCellByColumnAndRow(9, $rowNumber)->getFormattedValue()),
+            'cost_center' => trim((string) $worksheet->getCellByColumnAndRow(10, $rowNumber)->getFormattedValue()),
+            'user_email' => trim((string) $worksheet->getCellByColumnAndRow(11, $rowNumber)->getFormattedValue()),
+            'licenses' => trim((string) $worksheet->getCellByColumnAndRow(12, $rowNumber)->getFormattedValue()),
+            'alt_email' => trim((string) $worksheet->getCellByColumnAndRow(13, $rowNumber)->getFormattedValue()),
+            'role_name' => trim((string) $worksheet->getCellByColumnAndRow(14, $rowNumber)->getFormattedValue()),
+          ];
+
+          if (empty(array_filter($rowData))) {
+            continue;
+          }
+
+          $createUserFromData($rowData, $rowNumber);
+        }
+      } else {
+        $handle = fopen($file->getRealPath(), 'r');
+        if ($handle === false) {
+          return response()->json([
+            'message' => 'Failed to read CSV file',
+            'errors' => ['file' => ['Could not open the CSV file.']]
+          ], 422);
+        }
+
+        $headers = fgetcsv($handle);
+        if ($headers === false || empty($headers)) {
+          fclose($handle);
+          return response()->json([
+            'message' => 'Invalid CSV format',
+            'errors' => ['file' => ['The CSV file is empty or has invalid format.']]
+          ], 422);
+        }
+
+        $headers = array_map(function ($header) {
+          return trim(strtolower((string) $header));
+        }, $headers);
+
+        $columnMap = [
+          'username' => 'user_login',
+          'email' => 'user_email',
+          'password' => 'user_pass',
+          'first name' => 'first_name',
+          'last name' => 'last_name',
+          'employee id' => 'employee_id',
+          'position' => 'position',
+          'status' => 'user_status',
+          'role' => 'role_name',
+          'role name' => 'role_name',
+          'division' => 'division',
+          'project name' => 'project_name',
+          'start date' => 'start_date',
+          'outsourcing agency' => 'outsourcing_agency',
+          'cost center' => 'cost_center',
+          'licenses' => 'licenses',
+          'alt email' => 'alt_email',
+          'two email for midc/pitc' => 'alt_email',
+          'role id' => 'role_id',
+        ];
+
+        $rowNumber = 1;
+        while (($row = fgetcsv($handle)) !== false) {
+          $rowNumber++;
+          $totalProcessed++;
+
+          if (empty(array_filter($row))) {
+            continue;
+          }
+
+          $data = [];
+          $skipRow = false;
+          foreach ($headers as $index => $header) {
+            $value = isset($row[$index]) ? trim((string) $row[$index]) : '';
+            if (strpos($value, '#') === 0) {
+              $skipRow = true;
+              break;
+            }
             if (isset($columnMap[$header])) {
               $data[$columnMap[$header]] = $value;
             }
           }
 
-          // Validate required fields
-          if (empty($data['user_login']) || empty($data['user_email'])) {
-            $skipped++;
-            $errors[] = [
-              'row' => $rowNumber,
-              'message' => 'Missing required fields: Username and Email are required',
-              'data' => $data
-            ];
+          if ($skipRow) {
             continue;
           }
 
-          // Check if user already exists
-          $existingUser = User::where('user_login', $data['user_login'])
-            ->orWhere('user_email', $data['user_email'])
-            ->first();
-
-          if ($existingUser) {
-            $skipped++;
-            $errors[] = [
-              'row' => $rowNumber,
-              'message' => 'User already exists: ' . ($existingUser->user_login === $data['user_login'] ? 'Username' : 'Email') . ' already in use',
-              'data' => $data
-            ];
-            continue;
-          }
-
-          // Prepare user data
-          $salt = PasswordHelper::generateSalt();
-          $plainPassword = !empty($data['user_pass']) 
-            ? $data['user_pass']
-            : PasswordHelper::generateTemporaryPassword();
-          
-          $hashedPassword = PasswordHelper::generatePassword($salt, $plainPassword);
-          $activation_key = PasswordHelper::generateSalt();
-
-          $userData = [
-            'user_login' => $data['user_login'],
-            'user_email' => $data['user_email'],
-            'user_salt' => $salt,
-            'user_pass' => $hashedPassword,
-            'user_status' => isset($data['user_status']) ? (int)$data['user_status'] : 1,
-            'user_activation_key' => $activation_key,
-          ];
-
-          // Prepare meta details
-          $meta_details = [];
-          if (!empty($data['first_name'])) {
-            $meta_details['first_name'] = $data['first_name'];
-          }
-          if (!empty($data['last_name'])) {
-            $meta_details['last_name'] = $data['last_name'];
-          }
-          if (!empty($data['employee_id'])) {
-            $meta_details['employee_id'] = $data['employee_id'];
-          }
-          if (!empty($data['position'])) {
-            $meta_details['position'] = $data['position'];
-          }
-          if (!empty($data['role_id'])) {
-            $roleData = json_encode(['id' => (int)$data['role_id']]);
-            $meta_details['user_role'] = $roleData;
-            // Also set role_id directly on user table
-            $userData['role_id'] = (int)$data['role_id'];
-          }
-
-          // Create user
-          // Temporarily set password in request for email sending
-          $originalPassword = request('user_pass');
-          request()->merge(['user_pass' => $plainPassword]);
-          
-          try {
-            $user = $this->service->storeWithMeta($userData, $meta_details);
-            
-            if ($user) {
-              $imported++;
-            } else {
-              $skipped++;
-              $errors[] = [
-                'row' => $rowNumber,
-                'message' => 'Failed to create user',
-                'data' => $data
-              ];
-            }
-          } finally {
-            // Restore original password in request
-            if ($originalPassword !== null) {
-              request()->merge(['user_pass' => $originalPassword]);
-            } else {
-              request()->offsetUnset('user_pass');
-            }
-          }
-
-        } catch (\Exception $e) {
-          $skipped++;
-          $errors[] = [
-            'row' => $rowNumber,
-            'message' => $e->getMessage(),
-            'data' => $data ?? []
-          ];
+          $createUserFromData($data, $rowNumber);
         }
+        fclose($handle);
       }
-
-      fclose($handle);
 
       return response()->json([
         'data' => [
           'imported' => $imported,
           'skipped' => $skipped,
           'errors' => $errors,
-          'total_processed' => $rowNumber - 1
+          'total_processed' => $totalProcessed
         ],
         'message' => "Import completed. {$imported} user(s) imported, {$skipped} skipped."
       ], 200);
