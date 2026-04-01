@@ -24,6 +24,7 @@ class TicketRequest extends Model
         'contact_email',
         'ticket_status_id',
         'slas_id',
+        'ticket_priority_id',
         'for_approval',
         'manual_approval_data',
         'assigned_to',
@@ -96,6 +97,11 @@ class TicketRequest extends Model
     public function sla()
     {
         return $this->belongsTo(Sla::class, 'slas_id');
+    }
+
+    public function ticketPriority()
+    {
+        return $this->belongsTo(TicketPriority::class, 'ticket_priority_id');
     }
 
     public function assignedTo()

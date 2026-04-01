@@ -132,6 +132,7 @@ class TicketRequestSeeder extends Seeder
                 'contact_email' => $contact['email'],
                 'ticket_status_id' => $statusRow->id,
                 'slas_id' => $sla->id,
+                'ticket_priority_id' => ($i % 4) + 1,
                 'for_approval' => [TicketRequest::FOR_APPROVAL_AUTO, TicketRequest::FOR_APPROVAL_YES, TicketRequest::FOR_APPROVAL_NO][$i % 3],
                 'assigned_to' => $assignedId,
                 'submitted_at' => $submittedAt,

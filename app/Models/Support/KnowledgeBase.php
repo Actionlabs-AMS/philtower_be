@@ -30,7 +30,7 @@ class KnowledgeBase extends Model
         return $this->belongsTo(TicketRequest::class, 'ticket_request_id');
     }
 
-    public function update()
+    public function ticketUpdate()
     {
         return $this->belongsTo(TicketUpdate::class, 'ticket_update_id');
     }
