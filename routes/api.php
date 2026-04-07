@@ -262,6 +262,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 		// User Activity Routes
 		Route::prefix('user-activity')->group(function () {
+			Route::get('/export/login-history', [UserActivityController::class, 'exportAllLoginHistory']);
 			Route::get('/{userId}', [UserActivityController::class, 'getUserActivities']);
 			Route::get('/{userId}/login-history', [UserActivityController::class, 'getLoginHistory']);
 			Route::get('/{userId}/sessions', [UserActivityController::class, 'getActiveSessions']);

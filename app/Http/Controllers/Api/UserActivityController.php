@@ -177,6 +177,32 @@ class UserActivityController extends Controller
     }
 
     /**
+     * Export login history for all users (audit log + API tokens).
+     */
+    public function exportAllLoginHistory(Request $request): JsonResponse
+    {
+        try {
+            $filters = [
+                'start_date' => $request->query('start_date'),
+                'end_date' => $request->query('end_date'),
+                'limit' => $request->query('limit', 10000),
+            ];
+
+            $loginHistory = $this->userActivityService->getAllUsersLoginHistory($filters);
+
+            return response()->json([
+                'data' => $loginHistory,
+                'count' => count($loginHistory),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to export login history',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Get active sessions for a user
      * 
      * @OA\Get(

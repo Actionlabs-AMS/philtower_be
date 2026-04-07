@@ -4,9 +4,10 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\UserMeta;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class UserActivityService
 {
@@ -193,6 +194,159 @@ class UserActivityService
         });
         
         return array_slice($loginHistory, 0, $filters['limit'] ?? 50);
+    }
+
+    /**
+     * Login-related audit actions used for login history.
+     */
+    private const LOGIN_HISTORY_AUTH_ACTIONS = ['LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGOUT', 'LOGIN_BLOCKED'];
+
+    /**
+     * Aggregate login history for all users (audit log auth events + Sanctum tokens).
+     *
+     * @param array{start_date?: string|null, end_date?: string|null, limit?: int} $filters
+     * @return array<int, array<string, mixed>>
+     */
+    public function getAllUsersLoginHistory(array $filters = []): array
+    {
+        $startDate = $filters['start_date'] ?? null;
+        $endDate = $filters['end_date'] ?? null;
+        $rawLimit = isset($filters['limit']) ? (int) $filters['limit'] : 10000;
+        $limit = min(max($rawLimit, 1), 50000);
+
+        $ipLocationCache = [];
+        $rows = [];
+
+        $authActions = self::LOGIN_HISTORY_AUTH_ACTIONS;
+        $logFiles = $this->getAuditLogFiles($startDate, $endDate);
+
+        foreach ($logFiles as $file) {
+            $logs = $this->parseLogFile($file);
+            foreach ($logs as $log) {
+                if (($log['module'] ?? '') !== 'AUTHENTICATION') {
+                    continue;
+                }
+                $action = $log['action'] ?? '';
+                if (! in_array($action, $authActions, true)) {
+                    continue;
+                }
+
+                $logUserId = $log['user_id'] ?? $log['data']['user_id'] ?? null;
+                if ($logUserId === null) {
+                    continue;
+                }
+                $userId = (int) $logUserId;
+
+                if ($startDate || $endDate) {
+                    $logTimestamp = $log['timestamp'] ?? null;
+                    if ($logTimestamp) {
+                        try {
+                            $logDate = Carbon::parse($logTimestamp)->format('Y-m-d');
+                            if ($startDate && $logDate < $startDate) {
+                                continue;
+                            }
+                            if ($endDate && $logDate > $endDate) {
+                                continue;
+                            }
+                        } catch (\Exception $e) {
+                            continue;
+                        }
+                    }
+                }
+
+                $ip = $log['ip_address'] ?? null;
+                if ($ip !== null && $ip !== '' && ! array_key_exists($ip, $ipLocationCache)) {
+                    $ipLocationCache[$ip] = $this->getLocationFromIP($ip);
+                }
+                $location = ($ip !== null && $ip !== '') ? ($ipLocationCache[$ip] ?? null) : null;
+
+                $userAgent = $log['user_agent'] ?? null;
+                $deviceInfo = $this->parseUserAgent($userAgent);
+
+                $rows[] = [
+                    'id' => uniqid('', true),
+                    'user_id' => $userId,
+                    'type' => $this->mapActionToLoginType($action),
+                    'timestamp' => $log['timestamp'] ?? null,
+                    'ip_address' => $ip,
+                    'user_agent' => $userAgent,
+                    'status' => $this->getLoginStatus($action),
+                    'reason' => $log['data']['reason'] ?? null,
+                    'location' => $location,
+                    'device_info' => $deviceInfo,
+                    'last_activity' => null,
+                    'expires_at' => null,
+                ];
+            }
+        }
+
+        $tokens = PersonalAccessToken::query()
+            ->where('tokenable_type', User::class)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        foreach ($tokens as $token) {
+            $userId = (int) $token->tokenable_id;
+            $createdAt = $token->created_at?->toISOString();
+            $lastUsed = $token->last_used_at?->toISOString();
+            $expiresAt = $token->expires_at?->toISOString();
+
+            if ($startDate || $endDate) {
+                if ($createdAt) {
+                    try {
+                        $logDate = Carbon::parse($createdAt)->format('Y-m-d');
+                        if ($startDate && $logDate < $startDate) {
+                            continue;
+                        }
+                        if ($endDate && $logDate > $endDate) {
+                            continue;
+                        }
+                    } catch (\Exception $e) {
+                        continue;
+                    }
+                }
+            }
+
+            $rows[] = [
+                'id' => 'token_'.$token->id,
+                'user_id' => $userId,
+                'type' => 'session',
+                'timestamp' => $createdAt,
+                'ip_address' => null,
+                'user_agent' => null,
+                'status' => $token->expires_at && $token->expires_at->isFuture() ? 'active' : 'expired',
+                'reason' => null,
+                'location' => null,
+                'device_info' => null,
+                'last_activity' => $lastUsed,
+                'expires_at' => $expiresAt,
+            ];
+        }
+
+        $userIds = array_values(array_unique(array_column($rows, 'user_id')));
+        $users = collect();
+        if ($userIds !== []) {
+            $users = User::query()
+                ->whereIn('id', $userIds)
+                ->get(['id', 'user_login', 'user_email'])
+                ->keyBy('id');
+        }
+
+        foreach ($rows as &$row) {
+            $u = $users->get($row['user_id']);
+            $row['user_login'] = $u ? ($u->user_login ?? '') : '';
+            $row['user_email'] = $u ? ($u->user_email ?? '') : '';
+        }
+        unset($row);
+
+        usort($rows, function ($a, $b) {
+            $timeA = isset($a['timestamp']) ? strtotime((string) $a['timestamp']) : 0;
+            $timeB = isset($b['timestamp']) ? strtotime((string) $b['timestamp']) : 0;
+
+            return $timeB <=> $timeA;
+        });
+
+        return array_slice($rows, 0, $limit);
     }
     
     /**
