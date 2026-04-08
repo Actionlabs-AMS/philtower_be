@@ -6,8 +6,6 @@ use App\Models\Support\TicketRequest;
 use App\Models\Support\TicketStatus;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Ticket-based analytics for Overview: filters (service type, date range, statistics type),
@@ -21,7 +19,7 @@ class TicketAnalyticsService
      * @param int|null $serviceTypeId
      * @param string|null $dateFrom Y-m-d
      * @param string|null $dateTo   Y-m-d
-     * @param string $statisticsType 'tickets' | 'agents'
+     * @param string $statisticsType 'tickets' | 'agents' | 'mttr'
      * @param User|null $user Current user; when null, uses auth()->user(). If user cannot view all tickets, data is scoped to assigned_to.
      * @param int|null $ticketStatusId Optional filter by ticket status
      * @return array{chart: array{labels: string[], data: int[]}, table: array, statistics_type: string}
@@ -40,7 +38,11 @@ class TicketAnalyticsService
         $end = $dateTo ? Carbon::parse($dateTo)->endOfDay() : $now->copy()->endOfDay();
 
         $base = TicketRequest::query();
-        if ($user && ! $user->canViewAllTickets()) {
+        if ($statisticsType === 'mttr') {
+            // MTTR is a historical management report; include archived tickets.
+            $base->withTrashed();
+        }
+        if ($statisticsType !== 'mttr' && $user && ! $user->canViewAllTickets()) {
             $base->where('assigned_to', $user->id);
         }
         if ($serviceTypeId) {
@@ -49,13 +51,28 @@ class TicketAnalyticsService
         if ($ticketStatusId !== null && $ticketStatusId > 0) {
             $base->where('ticket_status_id', $ticketStatusId);
         }
-        $base->whereBetween('created_at', [$start, $end]);
+        if ($statisticsType === 'mttr') {
+            $excludedStatusIds = TicketStatus::query()
+                ->whereIn('code', ['cancelled', 'duplicate'])
+                ->pluck('id')
+                ->toArray();
+
+            $base->whereNotNull('resolved_at')
+                ->whereBetween('resolved_at', [$start, $end])
+                ->when(
+                    count($excludedStatusIds) > 0,
+                    fn ($q) => $q->whereNotIn('ticket_status_id', $excludedStatusIds)
+                );
+        } else {
+            $base->whereBetween('created_at', [$start, $end]);
+        }
 
         $closedStatusIds = TicketStatus::where('is_closed', true)->pluck('id')->toArray();
 
         // Chart: daily ticket counts (labels = dates, data = counts)
+        $dateField = $statisticsType === 'mttr' ? 'resolved_at' : 'created_at';
         $dailyCounts = (clone $base)
-            ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
+            ->selectRaw("DATE({$dateField}) as d, COUNT(*) as c")
             ->groupBy('d')
             ->orderBy('d')
             ->pluck('c', 'd')
@@ -79,6 +96,8 @@ class TicketAnalyticsService
         $table = [];
         if ($statisticsType === 'agents') {
             $table = $this->buildAgentsTable($base, $closedStatusIds);
+        } elseif ($statisticsType === 'mttr') {
+            $table = $this->buildMttrTable($base);
         } else {
             $table = $this->buildTicketDetailsTable($base);
         }
@@ -189,6 +208,52 @@ class TicketAnalyticsService
         }
 
         usort($rows, fn ($a, $b) => $b['total_count'] <=> $a['total_count']);
+        return $rows;
+    }
+
+    /**
+     * Table rows for "MTTR": resolved tickets with SLA active/net recovery time.
+     */
+    private function buildMttrTable($baseQuery): array
+    {
+        $tickets = (clone $baseQuery)
+            ->with(['ticketStatus', 'sla', 'slaClocks' => fn ($q) => $q->orderBy('id')])
+            ->orderBy('resolved_at', 'desc')
+            ->get();
+
+        $rows = [];
+        foreach ($tickets as $t) {
+            $clock = $t->slaClocks->first();
+            $elapsedMinutes = null;
+            if ($clock?->started_at && $clock?->completed_at) {
+                $elapsedMinutes = Carbon::parse($clock->started_at)
+                    ->diffInMinutes(Carbon::parse($clock->completed_at));
+            }
+
+            $pausedMinutes = (int) ($clock?->total_paused_minutes ?? 0);
+            $netRecoveryMinutes = $elapsedMinutes !== null
+                ? max(0, $elapsedMinutes - $pausedMinutes)
+                : null;
+
+            $severity = $t->sla?->severity;
+            $rows[] = [
+                'id' => $t->id,
+                'request_number' => $t->request_number,
+                'requestor' => $t->contact_name,
+                'requestor_email' => $t->contact_email,
+                'priority' => $severity,
+                'severity' => $severity,
+                'summary' => $t->description,
+                'created_at' => $t->created_at?->toIso8601String(),
+                'resolved_at' => $t->resolved_at?->toIso8601String(),
+                'sla_clock_started_at' => $clock?->started_at?->toIso8601String(),
+                'sla_clock_completed_at' => $clock?->completed_at?->toIso8601String(),
+                'sla_clock_total_paused_minutes' => $pausedMinutes,
+                'net_recovery_minutes' => $netRecoveryMinutes,
+                'net_recovery_hours' => $netRecoveryMinutes !== null ? round($netRecoveryMinutes / 60, 2) : null,
+            ];
+        }
+
         return $rows;
     }
 }

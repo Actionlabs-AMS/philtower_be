@@ -13,6 +13,7 @@ use App\Services\Support\TicketRequestService;
 use App\Services\MessageService;
 use App\Models\User;
 use App\Models\Support\TicketRelationship;
+use Illuminate\Validation\ValidationException;
 
 /**
  * All Tickets: ticket_requests CRUD. Soft deletes, bulk actions.
@@ -82,6 +83,13 @@ class TicketRequestController extends BaseController
             }
             $resource = $this->service->store($data);
             return response($resource, 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+                'status' => false,
+                'status_code' => 422,
+            ], 422);
         } catch (\Exception $e) {
             return $this->messageService->responseError($e);
         }

@@ -65,7 +65,7 @@ class AnalyticsController extends BaseController
 	 *     @OA\Parameter(name="service_type_id", in="query", @OA\Schema(type="integer")),
 	 *     @OA\Parameter(name="date_from", in="query", @OA\Schema(type="string", format="date")),
 	 *     @OA\Parameter(name="date_to", in="query", @OA\Schema(type="string", format="date")),
-	 *     @OA\Parameter(name="statistics_type", in="query", @OA\Schema(type="string", enum={"tickets", "agents"})),
+	 *     @OA\Parameter(name="statistics_type", in="query", @OA\Schema(type="string", enum={"tickets", "agents", "mttr"})),
 	 *     @OA\Response(response=200, description="Tickets overview retrieved successfully")
 	 * )
 	 */
@@ -77,7 +77,7 @@ class AnalyticsController extends BaseController
 			$dateTo = $request->query('date_to') ?: null;
 			$ticketStatusId = $request->query('ticket_status_id') ? (int) $request->query('ticket_status_id') : null;
 			$statisticsType = $request->query('statistics_type', 'tickets');
-			if (!in_array($statisticsType, ['tickets', 'agents'], true)) {
+			if (!in_array($statisticsType, ['tickets', 'agents', 'mttr'], true)) {
 				$statisticsType = 'tickets';
 			}
 

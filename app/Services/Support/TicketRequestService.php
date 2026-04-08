@@ -29,6 +29,18 @@ class TicketRequestService extends BaseService
     }
 
     /**
+     * Dispatch domain events without breaking core ticket writes when notification listeners fail.
+     */
+    protected function dispatchEventSafely(object $event): void
+    {
+        try {
+            event($event);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    /**
      * Set for_approval from selected service type: 1=yes, 2=no, 3=auto.
      * If for_approval is YES, set ticket_status_id to the "for_approval" status.
      */
@@ -126,12 +138,12 @@ class TicketRequestService extends BaseService
         $model = $resource->resource;
         if ($model instanceof TicketRequest) {
             $model->loadMissing(['ticketStatus']);
-            event(new TicketCreated($model));
+            $this->dispatchEventSafely(new TicketCreated($model));
 
             // If the ticket starts in a status that triggers notifications (e.g. for_approval),
             // fire the status-changed event so status-based listeners run on creation too.
             if ($model->ticketStatus?->code === 'for_approval') {
-                event(new TicketStatusChanged(
+                $this->dispatchEventSafely(new TicketStatusChanged(
                     $model,
                     null,
                     $model->ticketStatus?->label,
@@ -142,7 +154,7 @@ class TicketRequestService extends BaseService
 
             // Fire TicketAssigned if assigned at creation time
             if ($model->assigned_to) {
-                event(new TicketAssigned($model));
+                $this->dispatchEventSafely(new TicketAssigned($model));
             }
         }
         return $resource;
@@ -165,6 +177,27 @@ class TicketRequestService extends BaseService
 
         if (array_key_exists('ticket_status_id', $data) && (int) $oldStatusId !== (int) $newStatusId) {
             $newLabel = $model->ticketStatus?->label ?? 'Unknown';
+
+            // Keep lifecycle timestamps aligned with status transitions.
+            // - resolved => set resolved_at once (if missing)
+            // - closed   => set closed_at once (if missing), and ensure resolved_at exists
+            $newStatusCode = strtolower((string) ($model->ticketStatus?->code ?? ''));
+            if ($newStatusCode === 'resolved' && $model->resolved_at === null) {
+                $model->resolved_at = now();
+            }
+            if ($newStatusCode === 'closed') {
+                if ($model->closed_at === null) {
+                    $model->closed_at = now();
+                }
+                if ($model->resolved_at === null) {
+                    $model->resolved_at = $model->closed_at;
+                }
+            }
+            if ($model->isDirty(['resolved_at', 'closed_at'])) {
+                $model->save();
+                $model->refresh()->load(['ticketStatus']);
+            }
+
             TicketUpdate::create([
                 'ticket_request_id' => $id,
                 'type' => TicketUpdate::TYPE_STATUS_CHANGE,
@@ -172,17 +205,17 @@ class TicketRequestService extends BaseService
                 'is_internal' => false,
             ]);
             SlaHelper::manageTicketRequestSla($model, false);
-            event(new TicketStatusChanged($model, $oldLabel, $newLabel, (int) $oldStatusId, (int) $newStatusId));
+            $this->dispatchEventSafely(new TicketStatusChanged($model, $oldLabel, $newLabel, (int) $oldStatusId, (int) $newStatusId));
 
             // Fire TicketClosed when status transitions to 'closed'
             if ($model->ticketStatus?->code === 'closed') {
-                event(new TicketClosed($model));
+                $this->dispatchEventSafely(new TicketClosed($model));
             }
         }
 
         // Fire TicketAssigned when assigned_to changes to a new user
         if (array_key_exists('assigned_to', $data) && $data['assigned_to'] && (int) $data['assigned_to'] !== (int) $oldAssignedTo) {
-            event(new TicketAssigned($model));
+            $this->dispatchEventSafely(new TicketAssigned($model));
         }
 
         return $out;
@@ -343,7 +376,7 @@ class TicketRequestService extends BaseService
         $model->ticket_status_id = $status->id;
         $model->save();
         $model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']);
-        event(new TicketStatusChanged($model, $oldLabel, $status->label, (int) $oldStatusId, $status->id));
+        $this->dispatchEventSafely(new TicketStatusChanged($model, $oldLabel, $status->label, (int) $oldStatusId, $status->id));
         return TicketRequestResource::make($model);
     }
 
@@ -359,7 +392,7 @@ class TicketRequestService extends BaseService
         $model->ticket_status_id = $status->id;
         $model->save();
         $model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']);
-        event(new TicketStatusChanged($model, $oldLabel, $status->label, (int) $oldStatusId, $status->id));
+        $this->dispatchEventSafely(new TicketStatusChanged($model, $oldLabel, $status->label, (int) $oldStatusId, $status->id));
         return TicketRequestResource::make($model);
     }
 
@@ -412,7 +445,7 @@ class TicketRequestService extends BaseService
         ]);
 
         $model->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo', 'createdBy']);
-        event(new TicketStatusChanged(
+        $this->dispatchEventSafely(new TicketStatusChanged(
             $model,
             $oldLabel,
             $model->ticketStatus?->label ?? 'Pending Manual Approval',
@@ -461,7 +494,7 @@ class TicketRequestService extends BaseService
         ]);
 
         $ticket->load(['ticketStatus', 'serviceType', 'sla', 'user', 'assignedTo']);
-        event(new TicketAssigned($ticket));
+        $this->dispatchEventSafely(new TicketAssigned($ticket));
 
         return TicketRequestResource::make($ticket);
     }
