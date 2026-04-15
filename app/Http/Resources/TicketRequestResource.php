@@ -28,6 +28,7 @@ class TicketRequestResource extends JsonResource
             'contact_email' => $this->contact_email,
             'ticket_status_id' => $this->ticket_status_id,
             'slas_id' => $this->slas_id,
+            'ticket_priority_id' => $this->ticket_priority_id,
             'for_approval' => $this->for_approval,
             'manual_approval_data' => $this->manual_approval_data,
             'assigned_to' => $this->assigned_to,
@@ -44,6 +45,7 @@ class TicketRequestResource extends JsonResource
                 ->exists(),
             // Flat labels for list/table (when relations loaded)
             'ticket_status_label' => $this->whenLoaded('ticketStatus', fn () => $this->ticketStatus?->label),
+            'ticket_priority_label' => $this->whenLoaded('ticketPriority', fn () => $this->ticketPriority?->label),
             'service_type_name' => $this->whenLoaded('serviceType', fn () => $this->serviceType?->name),
             'assigned_to_name' => $this->whenLoaded('assignedTo', function () {
                 if (! $this->assignedTo) {
@@ -97,6 +99,11 @@ class TicketRequestResource extends JsonResource
                 'severity' => $this->sla->severity,
                 'response_minutes' => $this->sla->response_minutes,
                 'resolution_minutes' => $this->sla->resolution_minutes,
+            ] : null),
+            'ticket_priority' => $this->whenLoaded('ticketPriority', fn () => $this->ticketPriority ? [
+                'id' => $this->ticketPriority->id,
+                'label' => $this->ticketPriority->label,
+                'level' => $this->ticketPriority->level,
             ] : null),
             'user' => $this->whenLoaded('user', fn () => $this->user ? [
                 'id' => $this->user->id,

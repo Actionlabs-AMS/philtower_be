@@ -10,7 +10,7 @@
     },
     "servers": [
         {
-            "url": "http://localhost:8000",
+            "url": "https://philtower-api.servicedesk.com.ph",
             "description": "BaseCode API Server"
         },
         {
@@ -18,6 +18,82 @@
         }
     ],
     "paths": {
+        "/api/analytics/overview": {
+            "get": {
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Get analytics overview",
+                "description": "Get analytics overview",
+                "operationId": "4c9156368de28d96730f9e467e606324",
+                "responses": {
+                    "200": {
+                        "description": "Analytics overview retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/tickets-overview": {
+            "get": {
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Get tickets analytics overview",
+                "description": "Get ticket-based analytics overview (filters: service type, date range, statistics type).",
+                "operationId": "30b61c7acbc3067cc7c4a5dd267db2a1",
+                "parameters": [
+                    {
+                        "name": "service_type_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "statistics_type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "tickets",
+                                "agents"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tickets overview retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/signup": {
             "post": {
                 "tags": [
@@ -1602,6 +1678,122 @@
                 ]
             }
         },
+        "/api/analytics/content-reports/performance": {
+            "get": {
+                "tags": [
+                    "Content Reports"
+                ],
+                "summary": "Get content performance report",
+                "description": "Get content performance report",
+                "operationId": "9db576ed3d8526d23f6a936758086014",
+                "parameters": [
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Content performance report retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/content-reports/categories": {
+            "get": {
+                "tags": [
+                    "Content Reports"
+                ],
+                "summary": "Get category analysis report",
+                "description": "Get category analysis report",
+                "operationId": "20aa6c6e5de88f4aa3a60ec5261d5815",
+                "responses": {
+                    "200": {
+                        "description": "Category analysis report retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/content-reports/tags": {
+            "get": {
+                "tags": [
+                    "Content Reports"
+                ],
+                "summary": "Get tag analysis report",
+                "description": "Get tag analysis report",
+                "operationId": "d0392f80fdd3094ed3c542e30dcceb87",
+                "responses": {
+                    "200": {
+                        "description": "Tag analysis report retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/content-reports/media": {
+            "get": {
+                "tags": [
+                    "Content Reports"
+                ],
+                "summary": "Get media library report",
+                "description": "Get media library report",
+                "operationId": "6b28ad55dfaf73bea9a93e6f71f291d7",
+                "parameters": [
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Media library report retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/dashboard/stats": {
             "get": {
                 "tags": [
@@ -1663,6 +1855,161 @@
                                 }
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard/enhanced-stats": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get enhanced dashboard statistics",
+                "description": "Get enhanced dashboard statistics",
+                "operationId": "cd0a2a91ef304ad2197807e05eb288cc",
+                "responses": {
+                    "200": {
+                        "description": "Enhanced dashboard statistics retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard/widgets": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard widgets",
+                "description": "Get all dashboard widgets for current user",
+                "operationId": "324515c3c3f0d64273bbcffac2d540e7",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard widgets retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard/widgets/{id}/data": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get widget data",
+                "description": "Get widget data",
+                "operationId": "ca8bc6a4ecb09982909993f5a150a636",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Widget data retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard/user-registration-trend": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get user registration trend",
+                "description": "Get user registration trend",
+                "operationId": "47b2fe0c9590cc55f16c4584127bafa7",
+                "parameters": [
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "daily",
+                                "weekly",
+                                "monthly"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 30
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User registration trend retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard/pages-by-status": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get pages by status",
+                "description": "Get pages by status",
+                "operationId": "fabd2e8211e086ed36419cc87290b95d",
+                "responses": {
+                    "200": {
+                        "description": "Pages by status retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard/ticket-stats": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get ticket dashboard statistics",
+                "description": "Get ticket/support dashboard statistics (helpdesk-style KPIs, workflow, trends, agents).",
+                "operationId": "279daeada769c4304638b27b717eece2",
+                "responses": {
+                    "200": {
+                        "description": "Ticket stats retrieved successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
                     }
                 },
                 "security": [
@@ -7532,6 +7879,38 @@
                 ]
             }
         },
+        "/api/user-management/users/approvers": {
+            "get": {
+                "tags": [
+                    "User Management"
+                ],
+                "summary": "Get approvers only",
+                "description": "Dedicated endpoint for users who have the Approver role only.",
+                "operationId": "a97be9a54ca14f87d6b0edba5af0fb60",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1000
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Approvers retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/user-management/users/{id}": {
             "get": {
                 "tags": [
@@ -7650,7 +8029,7 @@
                                         "example": "NewSecurePass123!"
                                     },
                                     "user_status": {
-                                        "description": "User status (0=inactive, 1=active)",
+                                        "description": "User status (0=inactive, 1=active, 2=suspended)",
                                         "type": "integer",
                                         "example": 1
                                     },
@@ -8792,6 +9171,114 @@
                     }
                 ]
             }
+        },
+        "/api/analytics/user-reports/registration": {
+            "get": {
+                "tags": [
+                    "User Reports"
+                ],
+                "summary": "Get user registration report",
+                "description": "Get user registration report",
+                "operationId": "36f755d3ab4f1b7054bbb63af7ff82b5",
+                "parameters": [
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "daily",
+                                "weekly",
+                                "monthly"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User registration report retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/user-reports/engagement": {
+            "get": {
+                "tags": [
+                    "User Reports"
+                ],
+                "summary": "Get user engagement report",
+                "description": "Get user engagement report",
+                "operationId": "73a3ba4654ce4b10f080397212cb22ff",
+                "parameters": [
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User engagement report retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/user-reports/demographics": {
+            "get": {
+                "tags": [
+                    "User Reports"
+                ],
+                "summary": "Get user demographics report",
+                "description": "Get user demographics report",
+                "operationId": "9d7320357cc72055c7ba3be79788af85",
+                "responses": {
+                    "200": {
+                        "description": "User demographics report retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -8817,7 +9304,7 @@
                         "example": "john@example.com"
                     },
                     "user_status": {
-                        "description": "User status (0=inactive, 1=active)",
+                        "description": "User status (0=inactive, 1=active, 2=suspended)",
                         "type": "integer",
                         "example": 1
                     },
@@ -8856,12 +9343,20 @@
     },
     "tags": [
         {
+            "name": "Analytics",
+            "description": "API endpoints for analytics overview"
+        },
+        {
             "name": "Category Management",
             "description": "API endpoints for category management"
         },
         {
+            "name": "Content Reports",
+            "description": "API endpoints for content reports"
+        },
+        {
             "name": "Dashboard",
-            "description": "API endpoints for dashboard statistics"
+            "description": "API endpoints for dashboard statistics and widgets"
         },
         {
             "name": "Navigation Management",
@@ -8898,6 +9393,10 @@
         {
             "name": "User Management",
             "description": "API endpoints for user management operations"
+        },
+        {
+            "name": "User Reports",
+            "description": "API endpoints for user reports"
         },
         {
             "name": "Authentication",

@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\UserReportsController;
 use App\Http\Controllers\Api\ContentReportsController;
 use App\Http\Controllers\Api\AuditTrailController;
+use App\Http\Controllers\Api\TicketPriorityController;
 use App\Http\Controllers\Api\Support\ServiceTypeController;
 use App\Http\Controllers\Api\Support\TicketStatusController;
 use App\Http\Controllers\Api\Support\SlaController;
@@ -219,6 +220,16 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/{id}', [SlaController::class, 'show']);
 		Route::put('/{id}', [SlaController::class, 'update']);
 		Route::delete('/{id}', [SlaController::class, 'destroy']);
+	});
+
+	// Ticket Priority Management
+	// Currently has no view in the frontend but included for completeness and future extensibility (e.g. allowing users to set priority when creating a ticket request)
+	Route::prefix('service-catalog/ticket-priorities')->group(function () {
+		Route::get('/', [TicketPriorityController::class, 'index']);
+		Route::post('/', [TicketPriorityController::class, 'store']);
+		Route::get('/{ticketPriority}', [TicketPriorityController::class, 'show']);
+		Route::put('/{ticketPriority}', [TicketPriorityController::class, 'update']);
+		Route::delete('/{ticketPriority}', [TicketPriorityController::class, 'destroy']);
 	});
 
 	/*

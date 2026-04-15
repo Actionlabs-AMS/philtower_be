@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             LanguageSeeder::class,
             ServiceTypesSeeder::class,
             TicketStatusesSeeder::class,
+            TicketPrioritySeeder::class,
             SlasSeeder::class,
             TicketRequestSeeder::class,
             SlaClockSeeder::class,
