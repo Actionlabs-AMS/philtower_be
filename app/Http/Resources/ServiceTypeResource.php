@@ -7,6 +7,15 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ServiceTypeResource extends JsonResource
 {
+    private function computeLevel($node, int $currentLevel = 0): int
+    {
+        if (!$node || !$node->parent) {
+            return $currentLevel;
+        }
+
+        return $this->computeLevel($node->parent, $currentLevel + 1);
+    }
+    
     /**
      * Transform the resource into an array.
      *
@@ -28,6 +37,11 @@ class ServiceTypeResource extends JsonResource
                 'name' => $this->parent->name,
                 'code' => $this->parent->code,
             ]),
+
+             // 🔥 NEW: computed level
+            'level' => $this->computeLevel($this),
+
+            'children' => ServiceTypeResource::collection($this->whenLoaded('children')),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
             'deleted_at' => $this->deleted_at?->toIso8601String(),

@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateServiceTypeRequest;
 use App\Models\Support\ServiceType;
 use App\Services\MessageService;
 use App\Services\Support\ServiceTypeService;
+use App\Http\Resources\ServiceTypeResource;
 
 class ServiceTypeController extends BaseController
 {
@@ -84,11 +85,17 @@ class ServiceTypeController extends BaseController
      */
     public function getServiceTypes()
     {
-        $serviceTypes = ServiceType::where('active', true)
-            ->orderBy('parent_id')
-            ->orderBy('name')
+        $types = ServiceType::whereNull('parent_id')
+            ->where('active', 1)
+            ->with('children') // load children
             ->get();
-        return response()->json($serviceTypes);
+
+        return ServiceTypeResource::collection($types);
+    }
+
+    public function getSubServiceTypes($id)
+    {
+        return ServiceTypeResource::collection(ServiceType::query()->where('active', 1)->where('parent_id', $id)->orderBy('id', 'asc')->get());
     }
 
     /**

@@ -122,6 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/roles', [RoleController::class, 'getRoles']);  // Retrieve all roles
 		Route::get('/languages', [TranslationController::class, 'getLanguages']);
 		Route::get('/service-types', [ServiceTypeController::class, 'getServiceTypes']);
+		Route::get('/service-types/{id}', [ServiceTypeController::class, 'getSubServiceTypes']);
 		Route::get('/service-types/request-types', [ServiceTypeController::class, 'getRequestTypes']);
 	});
 
