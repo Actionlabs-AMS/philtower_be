@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Support\TicketRequestController;
 use App\Http\Controllers\Api\Support\TicketUpdateController;
 use App\Http\Controllers\Api\Support\KnowledgeBaseController;
 use App\Http\Controllers\Api\Support\MyRequestController;
+use App\Http\Controllers\Api\ItemController;
 
 /*
 |--------------------------------------------------------------------------
@@ -101,6 +102,29 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/logs/date', [AuditTrailController::class, 'getLogsForDate']);
 		Route::get('/logs/range', [AuditTrailController::class, 'getLogsForDateRange']);
 		Route::get('/logs/search', [AuditTrailController::class, 'searchLogs']);
+	});
+
+	/*
+	|--------------------------------------------------------------------------
+	| Categories Routes
+	|--------------------------------------------------------------------------
+	|
+	*/
+
+	Route::prefix('category-management/categories')->group(function () {
+		Route::get('/', [CategoryController::class, 'index']);
+		Route::post('/', [CategoryController::class, 'store']);
+		Route::get('/{id}', [CategoryController::class, 'show']);
+		Route::put('/{id}', [CategoryController::class, 'update']);
+		Route::delete('/{id}', [CategoryController::class, 'destroy']);
+	});
+
+	Route::prefix('category-management/items')->group(function () {
+		Route::get('/', [ItemController::class, 'index']);
+		Route::post('/', [ItemController::class, 'store']);
+		Route::get('/{id}', [ItemController::class, 'show']);
+		Route::put('/{id}', [ItemController::class, 'update']);
+		Route::delete('/{id}', [ItemController::class, 'destroy']);
 	});
 	
 	/*

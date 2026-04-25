@@ -77,6 +77,35 @@ class NavigationSeeder extends Seeder
                     ],
                 ],
             ],
+
+            // Category section
+            [
+                'name' => 'Category Management',
+                'slug' => 'category-management',
+                'icon' => 'folder',
+                'description' => 'Manage service categories and subcategories for organizing the service catalog',
+                'parent_id' => null,
+                'active' => true,
+                'show_in_menu' => true,
+                'children' => [
+                    [
+                        'name' => 'Categories',
+                        'slug' => 'categories',
+                        'icon' => 'folder-open',
+                        'description' => 'View and manage service categories and their hierarchy',
+                        'active' => true,
+                        'show_in_menu' => true,
+                    ],
+                    [
+                        'name' => 'Items',
+                        'slug' => 'items',
+                        'icon' => 'folder-plus',
+                        'description' => 'Manage items for more granular organization of services in the catalog',
+                        'active' => true,
+                        'show_in_menu' => true,
+                    ],
+                ],
+             ],
             
             // Service Catalog Section (no child-ticket-statuses / child SLA)
             [
