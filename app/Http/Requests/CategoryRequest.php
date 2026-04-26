@@ -23,7 +23,7 @@ class CategoryRequest extends FormRequest
   {
     return [
       "name" => "required|regex:/^[a-zA-Z0-9,&-_\s]+$/|unique:categories,name,".$this->id,
-      "slug" => "required|string|regex:/^[a-zA-Z0-9,&-_\s]+$/",
+      "code" => "required|string|regex:/^[a-zA-Z0-9,&-_\s]+$/",
       "descriptions" => "nullable|regex:/^[a-zA-Z0-9,&-_\s]+$/",
       "parent_id" => [
         'nullable',

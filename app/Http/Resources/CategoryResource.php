@@ -20,7 +20,7 @@ class CategoryResource extends JsonResource
       'parent_category' => $this->getParent,
       'parent_category_name' => ($this->getParent) ? $this->getParent->name : null,
       'name' => $this->name,
-      'slug' => $this->slug,
+      'code' => $this->code,
       'short_desc' => (strlen($this->descriptions) > 50) ? substr($this->descriptions, 0, 45) . '...' : $this->descriptions,
       'descriptions' => $this->descriptions,
       'active' => ($this->active) ? 'Active' : 'Inactive',

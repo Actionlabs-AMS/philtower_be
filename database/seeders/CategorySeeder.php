@@ -15,28 +15,28 @@ class CategorySeeder extends Seeder
         $categories = [
             [
                 'name' => 'General',
-                'slug' => 'general',
+                'code' => 'general',
                 'descriptions' => 'General category for miscellaneous content',
                 'parent_id' => null,
                 'active' => true,
             ],
             [
                 'name' => 'Technology',
-                'slug' => 'technology',
+                'code' => 'technology',
                 'descriptions' => 'Technology related content',
                 'parent_id' => null,
                 'active' => true,
             ],
             [
                 'name' => 'Business',
-                'slug' => 'business',
+                'code' => 'business',
                 'descriptions' => 'Business related content',
                 'parent_id' => null,
                 'active' => true,
             ],
             [
                 'name' => 'Education',
-                'slug' => 'education',
+                'code' => 'education',
                 'descriptions' => 'Education related content',
                 'parent_id' => null,
                 'active' => true,
@@ -44,14 +44,14 @@ class CategorySeeder extends Seeder
             // Sub-categories
             [
                 'name' => 'Web Development',
-                'slug' => 'web-development',
+                'code' => 'web-development',
                 'descriptions' => 'Web development subcategory',
                 'parent_id' => null, // Will be set after parent is created
                 'active' => true,
             ],
             [
                 'name' => 'Mobile Development',
-                'slug' => 'mobile-development',
+                'code' => 'mobile-development',
                 'descriptions' => 'Mobile development subcategory',
                 'parent_id' => null, // Will be set after parent is created
                 'active' => true,
@@ -61,19 +61,19 @@ class CategorySeeder extends Seeder
         // Create parent categories first
         $parentCategories = [];
         foreach ($categories as $category) {
-            if ($category['parent_id'] === null && in_array($category['slug'], ['general', 'technology', 'business', 'education'])) {
+            if ($category['parent_id'] === null && in_array($category['code'], ['general', 'technology', 'business', 'education'])) {
                 $cat = Category::create($category);
-                $parentCategories[$category['slug']] = $cat->id;
+                $parentCategories[$category['code']] = $cat->id;
             }
         }
 
         // Create sub-categories
         foreach ($categories as $category) {
-            if ($category['parent_id'] === null && !in_array($category['slug'], ['general', 'technology', 'business', 'education'])) {
+            if ($category['parent_id'] === null && !in_array($category['code'], ['general', 'technology', 'business', 'education'])) {
                 $parentId = null;
                 
-                // Determine parent based on slug
-                if (in_array($category['slug'], ['web-development', 'mobile-development'])) {
+                // Determine parent based on code
+                if (in_array($category['code'], ['web-development', 'mobile-development'])) {
                     $parentId = $parentCategories['technology'] ?? null;
                 }
                 
