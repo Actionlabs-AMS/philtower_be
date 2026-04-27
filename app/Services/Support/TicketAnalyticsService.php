@@ -16,7 +16,7 @@ class TicketAnalyticsService
     /**
      * Get tickets overview: chart (daily counts) + table (by date or by agent).
      *
-     * @param int|null $serviceTypeId
+     * @param int|null $categoryId
      * @param string|null $dateFrom Y-m-d
      * @param string|null $dateTo   Y-m-d
      * @param string $statisticsType 'tickets' | 'agents' | 'mttr'
@@ -25,7 +25,7 @@ class TicketAnalyticsService
      * @return array{chart: array{labels: string[], data: int[]}, table: array, statistics_type: string}
      */
     public function getTicketsOverview(
-        ?int $serviceTypeId,
+        ?int $categoryId,
         ?string $dateFrom,
         ?string $dateTo,
         string $statisticsType = 'tickets',
@@ -45,8 +45,8 @@ class TicketAnalyticsService
         if ($statisticsType !== 'mttr' && $user && ! $user->canViewAllTickets()) {
             $base->where('assigned_to', $user->id);
         }
-        if ($serviceTypeId) {
-            $base->where('service_type_id', $serviceTypeId);
+        if ($categoryId) {
+            $base->where('category_id', $categoryId);
         }
         if ($ticketStatusId !== null && $ticketStatusId > 0) {
             $base->where('ticket_status_id', $ticketStatusId);
@@ -115,15 +115,17 @@ class TicketAnalyticsService
     private function buildTicketDetailsTable($baseQuery): array
     {
         $tickets = (clone $baseQuery)
-            ->with(['ticketStatus', 'serviceType.parent', 'createdBy', 'slaClocks' => fn ($q) => $q->orderBy('id')])
+            ->with(['ticketStatus', 'serviceType.parent', 'category', 'subcategory', 'item', 'createdBy', 'slaClocks' => fn ($q) => $q->orderBy('id')])
             ->orderBy('created_at', 'desc')
             ->get();
 
         $rows = [];
         foreach ($tickets as $t) {
             $clock = $t->slaClocks->first();
-            $st = $t->serviceType;
-            $isChildType = $st && $st->parent_id !== null;
+            $serviceType = $t->serviceType;
+            $category = $t->category;
+            $subcategory = $t->subcategory;
+            $item = $t->item;
             $rows[] = [
                 'id' => $t->id,
                 'request_number' => $t->request_number,
@@ -131,12 +133,13 @@ class TicketAnalyticsService
                 'created_by' => $t->created_by,
                 'created_by_name' => $t->createdBy?->user_login,
                 'service_type_id' => $t->service_type_id,
-                // Preserve existing field used by the UI, but also provide category/sub-category split for exports.
-                'service_type_name' => $st?->name,
-                'service_category' => $st
-                    ? ($isChildType ? ($st->parent?->name ?? null) : ($st->name ?? null))
-                    : null,
-                'service_sub_category' => $isChildType ? ($st->name ?? null) : null,
+                // Service Category = parent service type only.
+                'service_type_name' => $serviceType?->name,
+                'service_category' => $serviceType?->parent?->name ?? $serviceType?->name,
+                // Category tree from ticket_requests columns.
+                'category_name' => $category?->name,
+                'sub_category_name' => $subcategory?->name,
+                'item_name' => $item?->name,
                 'description' => $t->description,
                 'contact_name' => $t->contact_name,
                 'contact_email' => $t->contact_email,

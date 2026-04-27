@@ -242,7 +242,7 @@ class TicketRequestService extends BaseService
         $my = $user ? (clone $baseQuery)->where('assigned_to', $user->id)->count() : 0;
         $unassigned = (clone $baseQuery)->whereNull('assigned_to')->count();
 
-        $query = (clone $baseQuery)->with(['ticketStatus', 'serviceType', 'ticketPriority', 'assignedTo', 'createdBy']);
+        $query = (clone $baseQuery)->with(['ticketStatus', 'serviceType', 'category', 'subcategory', 'item', 'ticketPriority', 'assignedTo', 'createdBy']);
         if ($trash) {
             $query->onlyTrashed();
         }
@@ -377,7 +377,7 @@ class TicketRequestService extends BaseService
 
     public function show(int $id)
     {
-        $model = TicketRequest::withTrashed()->with(['ticketStatus', 'serviceType', 'sla', 'ticketPriority', 'user', 'assignedTo', 'createdBy'])->findOrFail($id);
+        $model = TicketRequest::withTrashed()->with(['ticketStatus', 'serviceType', 'category', 'subcategory', 'item', 'sla', 'ticketPriority', 'user', 'assignedTo', 'createdBy'])->findOrFail($id);
         return TicketRequestResource::make($model);
     }
 
@@ -555,7 +555,7 @@ class TicketRequestService extends BaseService
         $all = (clone $baseQuery)->count();
         $trashed = (clone $baseQuery)->onlyTrashed()->count();
 
-        $query = TicketRequest::query()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'ticketPriority', 'assignedTo', 'createdBy']);
+        $query = TicketRequest::query()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'category', 'subcategory', 'item', 'ticketPriority', 'assignedTo', 'createdBy']);
         if ($trash) {
             $query->onlyTrashed();
         }
@@ -627,7 +627,7 @@ class TicketRequestService extends BaseService
      */
     public function showForUser(int $id, int $userId)
     {
-        $model = TicketRequest::withTrashed()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'sla', 'ticketPriority', 'user', 'assignedTo', 'createdBy'])->findOrFail($id);
+        $model = TicketRequest::withTrashed()->where('user_id', $userId)->with(['ticketStatus', 'serviceType', 'category', 'subcategory', 'item', 'sla', 'ticketPriority', 'user', 'assignedTo', 'createdBy'])->findOrFail($id);
         return TicketRequestResource::make($model);
     }
 }

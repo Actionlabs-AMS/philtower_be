@@ -62,7 +62,7 @@ class AnalyticsController extends BaseController
 	 *     summary="Get tickets analytics overview",
 	 *     tags={"Analytics"},
 	 *     security={{"sanctum": {}}},
-	 *     @OA\Parameter(name="service_type_id", in="query", @OA\Schema(type="integer")),
+	 *     @OA\Parameter(name="category_id", in="query", @OA\Schema(type="integer")),
 	 *     @OA\Parameter(name="date_from", in="query", @OA\Schema(type="string", format="date")),
 	 *     @OA\Parameter(name="date_to", in="query", @OA\Schema(type="string", format="date")),
 	 *     @OA\Parameter(name="statistics_type", in="query", @OA\Schema(type="string", enum={"tickets", "agents", "mttr"})),
@@ -72,7 +72,7 @@ class AnalyticsController extends BaseController
 	public function getTicketsOverview(Request $request, TicketAnalyticsService $ticketAnalytics): JsonResponse
 	{
 		try {
-			$serviceTypeId = $request->query('service_type_id') ? (int) $request->query('service_type_id') : null;
+			$categoryId = $request->query('category_id') ? (int) $request->query('category_id') : null;
 			$dateFrom = $request->query('date_from') ?: null;
 			$dateTo = $request->query('date_to') ?: null;
 			$ticketStatusId = $request->query('ticket_status_id') ? (int) $request->query('ticket_status_id') : null;
@@ -81,7 +81,7 @@ class AnalyticsController extends BaseController
 				$statisticsType = 'tickets';
 			}
 
-			$data = $ticketAnalytics->getTicketsOverview($serviceTypeId, $dateFrom, $dateTo, $statisticsType, $request->user(), $ticketStatusId);
+			$data = $ticketAnalytics->getTicketsOverview($categoryId, $dateFrom, $dateTo, $statisticsType, $request->user(), $ticketStatusId);
 
 			return response()->json([
 				'success' => true,

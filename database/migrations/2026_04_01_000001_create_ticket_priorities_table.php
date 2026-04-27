@@ -13,6 +13,7 @@ return new class extends Migration
     {
         if (! Schema::hasTable('ticket_priorities')) {
             Schema::create('ticket_priorities', function (Blueprint $table) {
+                $table->engine = 'InnoDB';
                 $table->id();
                 $table->string('label');
                 $table->float('level');

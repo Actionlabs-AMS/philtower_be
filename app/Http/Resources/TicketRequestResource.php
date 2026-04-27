@@ -50,6 +50,9 @@ class TicketRequestResource extends JsonResource
             'ticket_status_label' => $this->whenLoaded('ticketStatus', fn () => $this->ticketStatus?->label),
             'ticket_priority_label' => $this->whenLoaded('ticketPriority', fn () => $this->ticketPriority?->label),
             'service_type_name' => $this->whenLoaded('serviceType', fn () => $this->serviceType?->name),
+            'category_name' => $this->whenLoaded('category', fn () => $this->category?->name),
+            'subcategory_name' => $this->whenLoaded('subcategory', fn () => $this->subcategory?->name),
+            'item_name' => $this->whenLoaded('item', fn () => $this->item?->name),
             'assigned_to_name' => $this->whenLoaded('assignedTo', function () {
                 if (! $this->assignedTo) {
                     return null;
@@ -96,6 +99,21 @@ class TicketRequestResource extends JsonResource
                 'id' => $this->serviceType->id,
                 'name' => $this->serviceType->name,
                 'code' => $this->serviceType->code,
+            ] : null),
+            'category' => $this->whenLoaded('category', fn () => $this->category ? [
+                'id' => $this->category->id,
+                'name' => $this->category->name,
+                'code' => $this->category->code,
+            ] : null),
+            'subcategory' => $this->whenLoaded('subcategory', fn () => $this->subcategory ? [
+                'id' => $this->subcategory->id,
+                'name' => $this->subcategory->name,
+                'code' => $this->subcategory->code,
+            ] : null),
+            'item' => $this->whenLoaded('item', fn () => $this->item ? [
+                'id' => $this->item->id,
+                'name' => $this->item->name,
+                'code' => $this->item->code,
             ] : null),
             'sla' => $this->whenLoaded('sla', fn () => $this->sla ? [
                 'id' => $this->sla->id,

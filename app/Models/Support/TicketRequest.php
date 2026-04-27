@@ -2,6 +2,8 @@
 
 namespace App\Models\Support;
 
+use App\Models\Category;
+use App\Models\Item;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -99,7 +101,7 @@ class TicketRequest extends Model
 
     public function subcategory()
     {
-        return $this->belongsTo(Subcategory::class, 'subcategory_id');
+        return $this->belongsTo(Category::class, 'subcategory_id');
     }
 
     public function item()

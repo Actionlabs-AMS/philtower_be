@@ -140,6 +140,10 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::prefix('items')->group(function () {
 			Route::get('/', [ItemController::class, 'index']);
 			Route::post('/', [ItemController::class, 'store']);
+			Route::get('/archived', [ItemController::class, 'getTrashed']);
+			Route::put('/restore/{id}', [ItemController::class, 'restore']);
+			Route::patch('/restore/{id}', [ItemController::class, 'restore']);
+			Route::delete('/force-delete/{id}', [ItemController::class, 'forceDelete']);
 			Route::get('/{id}', [ItemController::class, 'show']);
 			Route::put('/{id}', [ItemController::class, 'update']);
 			Route::delete('/{id}', [ItemController::class, 'destroy']);

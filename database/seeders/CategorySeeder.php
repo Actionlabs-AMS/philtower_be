@@ -12,74 +12,47 @@ class CategorySeeder extends Seeder
      */
     public function run(): void
     {
-        $categories = [
-            [
-                'name' => 'General',
-                'code' => 'general',
-                'descriptions' => 'General category for miscellaneous content',
-                'parent_id' => null,
-                'active' => true,
-            ],
-            [
-                'name' => 'Technology',
-                'code' => 'technology',
-                'descriptions' => 'Technology related content',
-                'parent_id' => null,
-                'active' => true,
-            ],
-            [
-                'name' => 'Business',
-                'code' => 'business',
-                'descriptions' => 'Business related content',
-                'parent_id' => null,
-                'active' => true,
-            ],
-            [
-                'name' => 'Education',
-                'code' => 'education',
-                'descriptions' => 'Education related content',
-                'parent_id' => null,
-                'active' => true,
-            ],
-            // Sub-categories
-            [
-                'name' => 'Web Development',
-                'code' => 'web-development',
-                'descriptions' => 'Web development subcategory',
-                'parent_id' => null, // Will be set after parent is created
-                'active' => true,
-            ],
-            [
-                'name' => 'Mobile Development',
-                'code' => 'mobile-development',
-                'descriptions' => 'Mobile development subcategory',
-                'parent_id' => null, // Will be set after parent is created
-                'active' => true,
-            ],
+        $tree = [
+            'Hardware' => ['Laptop', 'Printer', 'Peripherals', 'Projector'],
+            'Software' => ['Office 365', 'Adhoc'],
+            'Network' => ['Wired', 'Wireless', 'Setup'],
+            'Access' => ['Creation', 'Update', 'Deactivation', 'Checking', 'Password Reset'],
+            'Data' => ['Backup', 'Restoration'],
         ];
 
-        // Create parent categories first
-        $parentCategories = [];
-        foreach ($categories as $category) {
-            if ($category['parent_id'] === null && in_array($category['code'], ['general', 'technology', 'business', 'education'])) {
-                $cat = Category::create($category);
-                $parentCategories[$category['code']] = $cat->id;
-            }
-        }
+        foreach ($tree as $parentName => $children) {
+            $parentCode = $this->slugify($parentName);
 
-        // Create sub-categories
-        foreach ($categories as $category) {
-            if ($category['parent_id'] === null && !in_array($category['code'], ['general', 'technology', 'business', 'education'])) {
-                $parentId = null;
-                
-                // Determine parent based on code
-                if (in_array($category['code'], ['web-development', 'mobile-development'])) {
-                    $parentId = $parentCategories['technology'] ?? null;
-                }
-                
-                $category['parent_id'] = $parentId;
-                Category::create($category);
+            $parent = Category::updateOrCreate(
+                ['code' => $parentCode],
+                [
+                    'name' => $parentName,
+                    'descriptions' => null,
+                    'parent_id' => null,
+                    'active' => true,
+                ]
+            );
+
+            foreach ($children as $childName) {
+                $childCode = $this->slugify($parentName . '-' . $childName);
+
+                Category::updateOrCreate(
+                    ['code' => $childCode],
+                    [
+                        'name' => $childName,
+                        'descriptions' => null,
+                        'parent_id' => $parent->id,
+                        'active' => true,
+                    ]
+                );
             }
         }
+    }
+
+    private function slugify(string $value): string
+    {
+        $value = strtolower(trim($value));
+        $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?? '';
+        return trim($value, '-');
     }
 }
