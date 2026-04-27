@@ -34,7 +34,7 @@ class CategoryService extends BaseService
       if (request('search')) {
         $query->where(function($q) {
           $q->where('name', 'LIKE', '%' . request('search') . '%')
-            ->orWhere('slug', 'LIKE', '%' . request('search') . '%')
+            ->orWhere('code', 'LIKE', '%' . request('search') . '%')
             ->orWhere('descriptions', 'LIKE', '%' . request('search') . '%');
         });
       }

@@ -31,9 +31,9 @@ class ServiceTypeService extends BaseService
         if (request('search')) {
             $search = request('search');
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                    ->orWhere('code', 'like', '%' . $search . '%')
-                    ->orWhere('description', 'like', '%' . $search . '%');
+                $q->where('name', 'like', "%{$search}%")
+                ->orWhere('code', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
@@ -43,6 +43,7 @@ class ServiceTypeService extends BaseService
 
         if (request()->filled('parent_id')) {
             $parentId = request('parent_id');
+
             if ($parentId === 'null' || $parentId === '') {
                 $query->whereNull('parent_id');
             } else {
@@ -54,14 +55,23 @@ class ServiceTypeService extends BaseService
         $sortDir = request('sort', 'asc');
         $query->orderBy($orderField, $sortDir);
 
-        return ServiceTypeResource::collection(
-            $query->paginate($perPage)->withQueryString()
-        )->additional([
-            'meta' => [
-                'all' => $all,
-                'trashed' => $trashed,
-            ],
-        ]);
+        $paginator = $query->paginate($perPage)->withQueryString();
+
+        // IMPORTANT: build map from FULL dataset (not paginated subset)
+        $map = $this->getMap();
+
+        $paginator->getCollection()->transform(function ($item) use ($map) {
+            $item->level = $this->computeLevel($item, $map);
+            return $item;
+        });
+
+        return ServiceTypeResource::collection($paginator)
+            ->additional([
+                'meta' => [
+                    'all' => $all,
+                    'trashed' => $trashed,
+                ],
+            ]);
     }
 
     /**
@@ -71,5 +81,43 @@ class ServiceTypeService extends BaseService
     {
         $model = ServiceType::with('parent')->findOrFail($id);
         return ServiceTypeResource::make($model);
+    }
+
+    private array $levelCache = [];
+
+    public function computeLevel($node, $map = null): int
+    {
+        if (!$node->id) return 0;
+
+        // ✅ cache check
+        if (isset($this->levelCache[$node->id])) {
+            return $this->levelCache[$node->id];
+        }
+
+        if (!$node->parent_id) {
+            return $this->levelCache[$node->id] = 0;
+        }
+
+        if ($map && isset($map[$node->parent_id])) {
+            return $this->levelCache[$node->id] =
+                1 + $this->computeLevel($map[$node->parent_id], $map);
+        }
+
+        $parent = $node->parent;
+
+        return $this->levelCache[$node->id] =
+            ($parent ? 1 + $this->computeLevel($parent) : 0);
+    }
+
+    private $map;
+    public function getMap()
+    {
+        if (!$this->map) {
+            $this->map = ServiceType::select('id', 'parent_id')
+                ->get()
+                ->keyBy('id');
+        }
+
+        return $this->map;
     }
 }

@@ -72,6 +72,9 @@ class RolePermissionSeeder extends Seeder
             $approverNavSlugs = [
                 'dashboard',
                 'profile',
+                'category-management',
+                'categories',
+                'items',
                 'ticket-management',
                 'all-tickets',
                 'tickets-for-approval',
@@ -111,6 +114,9 @@ class RolePermissionSeeder extends Seeder
             $agentNavSlugs = [
                 'dashboard',
                 'profile',
+                'category-management',
+                'categories',
+                'items',
                 'ticket-management',
                 'all-tickets',
                 'tickets-for-approval',
@@ -147,6 +153,9 @@ class RolePermissionSeeder extends Seeder
             $technicianNavSlugs = [
                 'dashboard',
                 'profile',
+                'category-management',
+                'categories',
+                'items',
                 'ticket-management',
                 'all-tickets',
                 'tickets-for-approval',

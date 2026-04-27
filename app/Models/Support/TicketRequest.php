@@ -2,6 +2,8 @@
 
 namespace App\Models\Support;
 
+use App\Models\Category;
+use App\Models\Item;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -17,6 +19,9 @@ class TicketRequest extends Model
         'created_by',
         'parent_ticket_id',
         'service_type_id',
+        'category_id',
+        'subcategory_id',
+        'item_id',
         'description',
         'attachment_metadata',
         'contact_number',
@@ -87,6 +92,21 @@ class TicketRequest extends Model
     public function serviceType()
     {
         return $this->belongsTo(ServiceType::class, 'service_type_id');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    public function subcategory()
+    {
+        return $this->belongsTo(Category::class, 'subcategory_id');
+    }
+
+    public function item()
+    {
+        return $this->belongsTo(Item::class, 'item_id');
     }
 
     public function ticketStatus()
