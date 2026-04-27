@@ -31,6 +31,9 @@ class StoreTicketRequestRequest extends FormRequest
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'parent_ticket_id' => ['nullable', 'integer'],
             'service_type_id' => ['nullable', 'integer', 'exists:service_types,id'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'subcategory_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'item_id' => ['nullable', 'integer', 'exists:items,id'],
             'description' => ['nullable', 'string'],
             'attachment_metadata' => ['nullable'],
             // Files are handled in controller; no validation here so multipart always passes

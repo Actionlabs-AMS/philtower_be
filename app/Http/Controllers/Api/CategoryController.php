@@ -543,7 +543,7 @@ class CategoryController extends BaseController
    *     )
    * )
    */
-  public function getCategories() 
+  public function getParentCategories() 
   {
     try {
 			return $this->service->categories();

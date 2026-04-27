@@ -13,7 +13,7 @@ class UpdateTicketRequestRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $nullableKeys = ['user_id', 'parent_ticket_id', 'service_type_id', 'ticket_status_id', 'slas_id', 'ticket_priority_id', 'assigned_to'];
+        $nullableKeys = ['user_id', 'parent_ticket_id', 'service_type_id', 'category_id', 'subcategory_id', 'item_id', 'ticket_status_id', 'slas_id', 'ticket_priority_id', 'assigned_to'];
         $merge = [];
         foreach ($nullableKeys as $key) {
             if ($this->has($key) && $this->input($key) === '') {
@@ -31,6 +31,9 @@ class UpdateTicketRequestRequest extends FormRequest
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'parent_ticket_id' => ['nullable', 'integer'],
             'service_type_id' => ['nullable', 'integer', 'exists:service_types,id'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'subcategory_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'item_id' => ['nullable', 'integer', 'exists:items,id'],
             'description' => ['nullable', 'string'],
             'attachment_metadata' => ['nullable'],
             'contact_number' => ['nullable', 'string', 'max:50'],

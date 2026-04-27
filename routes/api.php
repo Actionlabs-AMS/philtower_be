@@ -114,7 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::prefix('category-management')->group(function () {
 		Route::prefix('categories')->group(function () {
 			// categories-related routes
-			Route::get('/dropdown', [CategoryController::class, 'getCategories']);  // Retrieve all categories for dropdown
+			Route::get('/dropdown', [CategoryController::class, 'getParentCategories']);  // Retrieve all categories for dropdown
 			Route::get('/dropdown/{id}', [CategoryController::class, 'getSubCategories']);  // Retrieve subcategories for a specific category	
 
 			// Standard CRUD operations

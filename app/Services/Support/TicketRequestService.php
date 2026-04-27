@@ -330,6 +330,9 @@ class TicketRequestService extends BaseService
             'updated_at' => 'ticket_requests.updated_at',
             // Relation display fields (require join)
             'service_type_name' => 'service_types.name',
+            'category_name' => 'categories.name',
+            'subcategory_name' => 'categories.name',
+            'item_name' => 'items.name',
             'ticket_status_label' => 'ticket_statuses.label',
             // ticket_priorities.level via ticket_priority_id (join in branch below)
             'ticket_priority_level' => 'ticket_priorities.level',
