@@ -15,6 +15,7 @@ class Item extends Model
         'code',
         'description',
         'active',
+        'subcategory_id',
     ];
 
     protected $casts = [

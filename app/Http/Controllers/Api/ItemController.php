@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Item;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use App\Http\Requests\ItemRequest;
 use App\Http\Resources\ItemResource;
 use App\Services\ItemService;
@@ -28,7 +29,7 @@ class ItemController extends BaseController
         }
     }
 
-    public function store(StoreServiceTypeRequest $request)
+    public function store(ItemRequest $request)
     {
         try {
             $data = $request->validated();
@@ -49,7 +50,7 @@ class ItemController extends BaseController
         }
     }
 
-    public function update(UpdateServiceTypeRequest $request, $id)
+    public function update(ItemRequest $request, $id)
     {
         try {
             $data = $request->validated();

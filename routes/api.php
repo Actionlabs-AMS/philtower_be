@@ -111,21 +111,41 @@ Route::middleware('auth:sanctum')->group(function () {
 	|
 	*/
 
-	Route::prefix('category-management/categories')->group(function () {
-		Route::get('/', [CategoryController::class, 'index']);
-		Route::post('/', [CategoryController::class, 'store']);
-		Route::get('/{id}', [CategoryController::class, 'show']);
-		Route::put('/{id}', [CategoryController::class, 'update']);
-		Route::delete('/{id}', [CategoryController::class, 'destroy']);
+	Route::prefix('category-management')->group(function () {
+		Route::prefix('categories')->group(function () {
+			// categories-related routes
+			Route::get('/dropdown', [CategoryController::class, 'getCategories']);  // Retrieve all categories for dropdown
+			Route::get('/dropdown/{id}', [CategoryController::class, 'getSubCategories']);  // Retrieve subcategories for a specific category	
+
+			// Standard CRUD operations
+			Route::get('/', [CategoryController::class, 'index']);  // Retrieve all categories
+			Route::get('/{id}', [CategoryController::class, 'show']);  // Retrieve a single category
+			Route::post('/', [CategoryController::class, 'store']);  // Create a new category
+			Route::put('/{id}', [CategoryController::class, 'update']);  // Update an existing category
+			Route::delete('/{id}', [CategoryController::class, 'destroy']);  // Delete a category
+			
+			// Bulk operations
+			Route::post('/bulk/delete', [CategoryController::class, 'bulkDelete']);  // Bulk delete categories
+			Route::post('/bulk/restore', [CategoryController::class, 'bulkRestore']);  // Bulk restore categories
+			Route::post('/bulk/force-delete', [CategoryController::class, 'bulkForceDelete']);  // Bulk permanently delete categories
+		});
+
+		// Additional category management routes
+		Route::prefix('archived/categories')->group(function () {
+			Route::get('/', [CategoryController::class, 'getTrashed']); // Retrieve soft-deleted categories
+			Route::patch('/restore/{id}', [CategoryController::class, 'restore']); // Restore a soft-deleted category
+			Route::delete('/{id}', [CategoryController::class, 'forceDelete']); // Permanently delete a soft-deleted category
+		});
+
+		Route::prefix('items')->group(function () {
+			Route::get('/', [ItemController::class, 'index']);
+			Route::post('/', [ItemController::class, 'store']);
+			Route::get('/{id}', [ItemController::class, 'show']);
+			Route::put('/{id}', [ItemController::class, 'update']);
+			Route::delete('/{id}', [ItemController::class, 'destroy']);
+		});
 	});
 
-	Route::prefix('category-management/items')->group(function () {
-		Route::get('/', [ItemController::class, 'index']);
-		Route::post('/', [ItemController::class, 'store']);
-		Route::get('/{id}', [ItemController::class, 'show']);
-		Route::put('/{id}', [ItemController::class, 'update']);
-		Route::delete('/{id}', [ItemController::class, 'destroy']);
-	});
 	
 	/*
 	|--------------------------------------------------------------------------
@@ -134,10 +154,7 @@ Route::middleware('auth:sanctum')->group(function () {
 	*/
 	Route::prefix('options')->group(function () {
 		// media date folder
-		Route::get('/dates', [MediaController::class, 'dateFolder']);
-		// categories-related routes
-		Route::get('/categories', [CategoryController::class, 'getCategories']);  // Retrieve all categories for dropdown
-		Route::get('/categories/{id}', [CategoryController::class, 'getSubCategories']);  // Retrieve subcategories for a specific category		
+		Route::get('/dates', [MediaController::class, 'dateFolder']);	
 		Route::get('/tags', [TagController::class, 'getTags']);  // Retrieve all tags for dropdown
 		// navigation-related routes
 		Route::get('/navigations', [NavigationController::class, 'getNavigations']);  // Retrieve all categories for dropdown
@@ -344,27 +361,6 @@ Route::middleware('auth:sanctum')->group(function () {
 		// Specific routes must come before apiResource to avoid route conflicts
 		Route::post('/media-library/bulk/delete', [MediaController::class, 'bulkDelete']);
 		Route::apiResource('/media-library', MediaController::class);	
-
-		Route::prefix('categories')->group(function () {
-			// Standard CRUD operations
-			Route::get('/', [CategoryController::class, 'index']);  // Retrieve all categories
-			Route::get('/{id}', [CategoryController::class, 'show']);  // Retrieve a single category
-			Route::post('/', [CategoryController::class, 'store']);  // Create a new category
-			Route::put('/{id}', [CategoryController::class, 'update']);  // Update an existing category
-			Route::delete('/{id}', [CategoryController::class, 'destroy']);  // Delete a category
-			
-			// Bulk operations
-			Route::post('/bulk/delete', [CategoryController::class, 'bulkDelete']);  // Bulk delete categories
-			Route::post('/bulk/restore', [CategoryController::class, 'bulkRestore']);  // Bulk restore categories
-			Route::post('/bulk/force-delete', [CategoryController::class, 'bulkForceDelete']);  // Bulk permanently delete categories
-		});
-
-		// Additional category management routes
-		Route::prefix('archived/categories')->group(function () {
-			Route::get('/', [CategoryController::class, 'getTrashed']); // Retrieve soft-deleted categories
-			Route::patch('/restore/{id}', [CategoryController::class, 'restore']); // Restore a soft-deleted category
-			Route::delete('/{id}', [CategoryController::class, 'forceDelete']); // Permanently delete a soft-deleted category
-		});
 
 		Route::prefix('tags')->group(function () {
 			// Standard CRUD operations
