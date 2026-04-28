@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CategoryRequest extends FormRequest
 {
@@ -22,7 +23,17 @@ class CategoryRequest extends FormRequest
   public function rules(): array
   {
     return [
-      "name" => "required|regex:/^[a-zA-Z0-9,&-_\s]+$/|unique:categories,name,".$this->id,
+      "name" => [
+        "required",
+        "regex:/^[a-zA-Z0-9,&-_\s]+$/",
+        Rule::unique('categories')
+          ->where(function ($query) {
+            return $query
+              ->where('parent_id', $this->parent_id)
+              ->where('code', $this->code);
+          })
+          ->ignore($this->id),
+      ],
       "code" => "required|string|regex:/^[a-zA-Z0-9,&-_\s]+$/",
       "descriptions" => "nullable|regex:/^[a-zA-Z0-9,&-_\s]+$/",
       "parent_id" => [
