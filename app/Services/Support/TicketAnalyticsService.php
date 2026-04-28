@@ -115,7 +115,7 @@ class TicketAnalyticsService
     private function buildTicketDetailsTable($baseQuery): array
     {
         $tickets = (clone $baseQuery)
-            ->with(['ticketStatus', 'serviceType.parent', 'category', 'subcategory', 'item', 'createdBy', 'slaClocks' => fn ($q) => $q->orderBy('id')])
+            ->with(['ticketStatus', 'serviceType.parent', 'category', 'subcategory', 'item', 'createdBy', 'sla', 'ticketPriority', 'slaClocks' => fn ($q) => $q->orderBy('id')])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -147,6 +147,11 @@ class TicketAnalyticsService
                 'ticket_status_id' => $t->ticket_status_id,
                 'status_code' => $t->ticketStatus?->code,
                 'status_label' => $t->ticketStatus?->label,
+                'slas_id' => $t->slas_id,
+                'sla_severity_label' => $t->sla?->severity,
+                'severity' => $t->sla?->severity,
+                'ticket_priority_id' => $t->ticket_priority_id,
+                'ticket_priority_label' => $t->ticketPriority?->label,
                 'assigned_to' => $t->assigned_to,
                 'submitted_at' => $t->submitted_at?->toIso8601String(),
                 'resolved_at' => $t->resolved_at?->toIso8601String(),
@@ -220,7 +225,7 @@ class TicketAnalyticsService
     private function buildMttrTable($baseQuery): array
     {
         $tickets = (clone $baseQuery)
-            ->with(['ticketStatus', 'sla', 'slaClocks' => fn ($q) => $q->orderBy('id')])
+            ->with(['ticketStatus', 'sla', 'ticketPriority', 'slaClocks' => fn ($q) => $q->orderBy('id')])
             ->orderBy('resolved_at', 'desc')
             ->get();
 
@@ -239,12 +244,17 @@ class TicketAnalyticsService
                 : null;
 
             $severity = $t->sla?->severity;
+            $priority = $t->ticketPriority?->label;
             $rows[] = [
                 'id' => $t->id,
                 'request_number' => $t->request_number,
                 'requestor' => $t->contact_name,
                 'requestor_email' => $t->contact_email,
-                'priority' => $severity,
+                'slas_id' => $t->slas_id,
+                'sla_severity_label' => $severity,
+                'ticket_priority_id' => $t->ticket_priority_id,
+                'ticket_priority_label' => $priority,
+                'priority' => $priority,
                 'severity' => $severity,
                 'summary' => $t->description,
                 'created_at' => $t->created_at?->toIso8601String(),
