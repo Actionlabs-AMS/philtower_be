@@ -9,9 +9,6 @@ use App\Helpers\PasswordHelper;
 
 class UserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $superAdminRole = Role::where('is_super_admin', true)->first() 
@@ -23,7 +20,18 @@ class UserSeeder extends Seeder
             return;
         }
 
-        // Create Super Admin user
+        // ✅ Department list
+        $departments = [
+            'IT',
+            'HR',
+            'Finance',
+            'Operations',
+            'Customer Support',
+            'Engineering',
+            'Admin'
+        ];
+
+        // Create Super Admin
         $salt = PasswordHelper::generateSalt();
         $password = PasswordHelper::generatePassword($salt, 'admin123'); 
         
@@ -40,7 +48,14 @@ class UserSeeder extends Seeder
             ]
         );
 
-        // Get all available roles (excluding Developer Account which is Super Admin)
+        // ✅ Assign department to super admin
+        $superAdmin->saveUserMeta([
+            'first_name' => 'System',
+            'last_name' => 'Administrator',
+            'nickname' => 'Admin',
+            'department' => 'IT', // fixed for admin
+        ]);
+
         $availableRoles = Role::where('name', '!=', 'Developer Account')->get();
         
         if ($availableRoles->isEmpty()) {
@@ -48,7 +63,6 @@ class UserSeeder extends Seeder
             $availableRoles = collect([$superAdminRole]);
         }
 
-        // Create 20 test users
         $firstNames = ['John', 'Jane', 'Mike', 'Sarah', 'David', 'Emma', 'Chris', 'Lisa', 'Tom', 'Amy', 'Mark', 'Julia', 'Paul', 'Rachel', 'Steve', 'Olivia', 'Dan', 'Sophia', 'Ryan', 'Emma'];
         $lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee'];
         
@@ -56,7 +70,7 @@ class UserSeeder extends Seeder
         $roleCount = count($roles);
 
         for ($i = 1; $i <= 20; $i++) {
-            // Distribute roles evenly
+
             $roleIndex = ($i - 1) % $roleCount;
             $selectedRole = $availableRoles[$roleIndex];
             
@@ -64,14 +78,13 @@ class UserSeeder extends Seeder
             $lastName = $lastNames[($i - 1) % count($lastNames)];
             $userLogin = strtolower($firstName . $i);
             $userEmail = $userLogin . '@basecode.com';
-            $password = 'password123'; // Same password for all test users
+            $password = 'password123';
             
             $salt = PasswordHelper::generateSalt();
             $hashedPassword = PasswordHelper::generatePassword($salt, $password);
             
-            // Random user status: 1 (Active), 0 (Inactive), or 2 (Suspended)
-            $userStatus = [1, 1, 1, 0, 2][($i - 1) % 5]; // Mostly active users
-            
+            $userStatus = [1, 1, 1, 0, 2][($i - 1) % 5];
+
             $user = User::updateOrCreate(
                 ['user_email' => $userEmail],
                 [
@@ -84,15 +97,19 @@ class UserSeeder extends Seeder
                     'role_id' => $selectedRole->id,
                 ]
             );
-            
-            // Save user meta for first_name and last_name
-            if ($user->wasRecentlyCreated || !$user->getMeta('first_name')) {
-                $user->saveUserMeta([
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
-                    'nickname' => $firstName,
-                ]);
-            }
+
+            // ✅ Random department
+            $department = $departments[array_rand($departments)];
+
+            // ✅ Save meta INCLUDING department
+            $user->saveUserMeta([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'nickname' => $firstName,
+                'department' => $department,
+            ]);
         }
+
+        $this->command->info('Users seeded with departments successfully.');
     }
 }
