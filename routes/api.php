@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\UserReportsController;
 use App\Http\Controllers\Api\ContentReportsController;
 use App\Http\Controllers\Api\AuditTrailController;
 use App\Http\Controllers\Api\TicketPriorityController;
+use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\Support\ServiceTypeController;
 use App\Http\Controllers\Api\Support\TicketStatusController;
 use App\Http\Controllers\Api\Support\SlaController;
@@ -147,6 +148,35 @@ Route::middleware('auth:sanctum')->group(function () {
 			Route::get('/{id}', [ItemController::class, 'show']);
 			Route::put('/{id}', [ItemController::class, 'update']);
 			Route::delete('/{id}', [ItemController::class, 'destroy']);
+		});
+	});
+
+
+	/*
+	|--------------------------------------------------------------------------
+	| Department Routes
+	|--------------------------------------------------------------------------
+	|
+	*/
+
+	Route::prefix('departments')->group(function () {
+		// Standard CRUD operations
+		Route::get('/', [DepartmentController::class, 'index']);  // Retrieve all categories
+		Route::get('/{id}', [DepartmentController::class, 'show']);  // Retrieve a single category
+		Route::post('/', [DepartmentController::class, 'store']);  // Create a new category
+		Route::put('/{id}', [DepartmentController::class, 'update']);  // Update an existing category
+		Route::delete('/{id}', [DepartmentController::class, 'destroy']);  // Delete a category
+		
+		// Bulk operations
+		Route::post('/bulk/delete', [DepartmentController::class, 'bulkDelete']);  // Bulk delete categories
+		Route::post('/bulk/restore', [DepartmentController::class, 'bulkRestore']);  // Bulk restore categories
+		Route::post('/bulk/force-delete', [DepartmentController::class, 'bulkForceDelete']);  // Bulk permanently delete categories
+
+		// Additional category management routes
+		Route::prefix('archived/')->group(function () {
+			Route::get('/', [DepartmentController::class, 'getTrashed']); // Retrieve soft-deleted categories
+			Route::patch('/restore/{id}', [DepartmentController::class, 'restore']); // Restore a soft-deleted category
+			Route::delete('/{id}', [DepartmentController::class, 'forceDelete']); // Permanently delete a soft-deleted category
 		});
 	});
 

@@ -6,16 +6,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Category extends Model
+class Department extends Model
 {
-	use SoftDeletes;
+    use SoftDeletes;
   /**
 	 * The attributes that are mass assignable.
 	 *
 	 * @var array<int, string>
 	 */
 	protected $fillable = [
-		'parent_id',
 		'name',
 		'code',
 		'descriptions',
@@ -33,34 +32,10 @@ class Category extends Model
 		'deleted_at' => 'datetime',
 	];
 
-  /**
-	 * The table associated with the model.
-	 *
-	 * @var string
-	*/
-	protected $table = 'categories';
-
-	/**
-	 * Append additiona info to the return data
-	 *
-	 * @var string
-	 */
-	public $appends = [
-		'label'
-	];
-
-	public function parent()
-	{
-		return $this->belongsTo(Category::class, 'parent_id');
-	}
-	
-	public function children() 
-	{
-		return $this->hasMany(Category::class, 'parent_id');
-	}
-
-	public function getLabelAttribute() 
-	{
-		return $this->name;
-	}
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+    */
+    protected $table = 'departments';
 }

@@ -8,7 +8,6 @@ use App\Models\Support\TicketStatus;
 use App\Models\Support\Sla;
 use App\Models\User;
 use App\Models\Category;
-use App\Models\Subcategory;
 use App\Models\Item;
 use Illuminate\Database\Seeder;
 
@@ -18,8 +17,9 @@ class TicketRequestSeeder extends Seeder
     {
         $userIds = User::pluck('id')->toArray();
 
-        $categories = Category::with('children')->get();
-        $subcategories = Subcategory::all();
+        // ✅ Separate properly
+        $categories = Category::whereNull('parent_id')->get();
+        $subcategories = Category::whereNotNull('parent_id')->get();
         $items = Item::all();
 
         if ($categories->isEmpty() || $subcategories->isEmpty() || $items->isEmpty()) {
@@ -53,16 +53,28 @@ class TicketRequestSeeder extends Seeder
             $contactEmail = fake()->safeEmail();
             $contactPhone = '+639' . rand(100000000, 999999999);
 
-            // 🎯 RANDOM BUT VALID HIERARCHY
+            // ✅ STEP 1: Pick category
             $category = $categories->random();
 
-            $subcategory = $subcategories
-                ->where('category_id', $category->id)
-                ->random();
+            // ✅ STEP 2: Get valid subcategories
+            $filteredSubcategories = $subcategories
+                ->where('parent_id', $category->id);
 
-            $item = $items
-                ->where('subcategory_id', $subcategory->id)
-                ->random();
+            if ($filteredSubcategories->isEmpty()) {
+                continue; // skip invalid hierarchy
+            }
+
+            $subcategory = $filteredSubcategories->random();
+
+            // ✅ STEP 3: Get valid items
+            $filteredItems = $items
+                ->where('subcategory_id', $subcategory->id);
+
+            if ($filteredItems->isEmpty()) {
+                continue; // skip again if no items
+            }
+
+            $item = $filteredItems->random();
 
             $userId = $userIds[array_rand($userIds)];
             $assignedId = in_array($i, [0, 1, 7, 12]) ? null : $userIds[array_rand($userIds)];
@@ -70,7 +82,7 @@ class TicketRequestSeeder extends Seeder
             $day += rand(1, 2);
             $submittedAt = $baseTime->copy()->addDays($day);
 
-            $sla = $slas->get((string) (($i % 5) + 1)) ?? $slaDefault;
+            $sla = $slas->get((string)(($i % 5) + 1)) ?? $slaDefault;
 
             $statusRow = match ($i % 12) {
                 0, 1 => $statusNew,
@@ -97,7 +109,7 @@ class TicketRequestSeeder extends Seeder
             $tickets[] = [
                 'user_id' => $userId,
 
-                // ✅ NEW RELATIONSHIP FIELDS
+                // ✅ RELATION FIELDS
                 'category_id' => $category->id,
                 'subcategory_id' => $subcategory->id,
                 'item_id' => $item->id,
@@ -135,6 +147,6 @@ class TicketRequestSeeder extends Seeder
             TicketRequest::create($data);
         }
 
-        $this->command->info('TicketRequestSeeder: ' . count($tickets) . ' tickets created with category hierarchy.');
+        $this->command->info('TicketRequestSeeder: ' . count($tickets) . ' tickets created with valid hierarchy.');
     }
 }
