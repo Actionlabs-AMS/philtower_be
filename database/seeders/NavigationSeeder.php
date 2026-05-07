@@ -105,7 +105,18 @@ class NavigationSeeder extends Seeder
                         'show_in_menu' => true,
                     ],
                 ],
-             ],
+            ],
+
+            // Department section
+            [
+                'name' => 'Departments',
+                'slug' => 'departments',
+                'icon' => 'building',
+                'description' => 'Manage departments and their associated users and services',
+                'parent_id' => null,
+                'active' => true,
+                'show_in_menu' => true,
+            ],
             
             // Service Catalog Section (no child-ticket-statuses / child SLA)
             [

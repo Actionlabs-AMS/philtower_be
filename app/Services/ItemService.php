@@ -32,7 +32,7 @@ class ItemService extends BaseService
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                  ->orWhere('descriptions', 'like', "%{$search}%");
             });
         }
 

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Department;
 use App\Http\Resources\DepartmentResource;
+use App\Services\BaseService;
 
 class DepartmentService extends BaseService
 {
@@ -33,8 +34,7 @@ class DepartmentService extends BaseService
       if (request('search')) {
         $query->where(function($q) {
           $q->where('name', 'LIKE', '%' . request('search') . '%')
-            ->orWhere('code', 'LIKE', '%' . request('search') . '%')
-            ->orWhere('descriptions', 'LIKE', '%' . request('search') . '%');
+            ->orWhere('code', 'LIKE', '%' . request('search') . '%');
         });
       }
 
