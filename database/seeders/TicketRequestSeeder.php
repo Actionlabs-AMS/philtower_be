@@ -17,6 +17,24 @@ class TicketRequestSeeder extends Seeder
     {
         $userIds = User::pluck('id')->toArray();
 
+        $philippineLocations = [
+            'Quezon City, Metro Manila',
+            'Makati City, Metro Manila',
+            'Taguig City, Metro Manila',
+            'Pasig City, Metro Manila',
+            'Manila City, Metro Manila',
+            'Cebu City, Cebu',
+            'Davao City, Davao del Sur',
+            'Iloilo City, Iloilo',
+            'Baguio City, Benguet',
+            'Cagayan de Oro City, Misamis Oriental',
+            'Bacolod City, Negros Occidental',
+            'Antipolo City, Rizal',
+            'General Santos City, South Cotabato',
+            'Batangas City, Batangas',
+            'Puerto Princesa, Palawan',
+        ];
+
         // ✅ Separate properly
         $categories = Category::whereNull('parent_id')->get();
         $subcategories = Category::whereNotNull('parent_id')->get();
@@ -124,6 +142,8 @@ class TicketRequestSeeder extends Seeder
                 'contact_number' => $contactPhone,
                 'contact_name' => $contactName,
                 'contact_email' => $contactEmail,
+
+                'location' => $philippineLocations[array_rand($philippineLocations)],
 
                 'ticket_status_id' => $statusRow->id,
                 'slas_id' => $sla->id,
