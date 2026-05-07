@@ -40,7 +40,7 @@ class StoreTicketRequestRequest extends FormRequest
             'contact_number' => ['nullable', 'string', 'max:50'],
             'contact_name' => ['nullable', 'string', 'max:100'],
             'contact_email' => ['nullable', 'email', 'max:100'],
-            'location' => ['nullable', 'string', 'max:255'],
+            'location' => ['required', 'string', 'max:255'],
             'ticket_status_id' => ['nullable', 'integer', 'exists:ticket_statuses,id'],
             'slas_id' => ['nullable', 'integer', 'exists:slas,id'],
             'ticket_priority_id' => ['nullable', 'integer', 'exists:ticket_priorities,id'],
