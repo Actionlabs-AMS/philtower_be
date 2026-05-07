@@ -49,12 +49,12 @@ class Category extends Model
 		'label'
 	];
 
-	public function parent()
+	public function getParent()
 	{
 		return $this->belongsTo(Category::class, 'parent_id');
 	}
 	
-	public function children() 
+	public function getChildren() 
 	{
 		return $this->hasMany(Category::class, 'parent_id');
 	}

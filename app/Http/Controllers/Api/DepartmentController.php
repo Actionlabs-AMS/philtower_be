@@ -310,7 +310,7 @@ class DepartmentController extends BaseController
   }
 
   /**
-   * Permanently delete a category.
+   * Permanently delete a department.
    * 
    * @OA\Delete(
    *     path="/api/content-management/archived/departments/{id}",
@@ -438,12 +438,12 @@ class DepartmentController extends BaseController
    *     )
    * )
    */
-  public function store(CategoryRequest $request)
+  public function store(DepartmentRequest $request)
   {
     // try {
       $data = $request->all();
-      $category = $this->service->store($data);
-      return response($category, 201);
+      $department = $this->service->store($data);
+      return response($department, 201);
     // } catch (\Exception $e) {
     //   return $this->messageService->responseError();
     // }
@@ -504,12 +504,12 @@ class DepartmentController extends BaseController
    *     )
    * )
    */
-  public function update(CategoryRequest $request, int $id)
+  public function update(DepartmentRequest $request, int $id)
   {
     // try {
       $data = $request->all();
-      $category = $this->service->update($data, $id);
-      return response($category, 201);
+      $department = $this->service->update($data, $id);
+      return response($department, 201);
     // } catch (\Exception $e) {
     //   return $this->messageService->responseError();
     // }
