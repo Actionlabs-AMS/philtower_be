@@ -495,7 +495,7 @@ class UserController extends BaseController
         'first_name' => $request->first_name,
         'last_name' => $request->last_name,
         'employee_id' => $request->employee_id,
-        'position' => $request->position,
+        'department' => $request->department,
       ]);
 
       $salt = PasswordHelper::generateSalt();
@@ -521,8 +521,8 @@ class UserController extends BaseController
       if(isset($request->employee_id))
         $meta_details['employee_id'] = $request->employee_id;
       
-      if(isset($request->position))
-        $meta_details['position'] = $request->position;
+      if(isset($request->department))
+        $meta_details['department'] = $request->department;
     
       if (isset($request->can_view_all)) {
         $meta_details['can_view_all'] = $request->boolean('can_view_all') ? '1' : '0';
@@ -559,7 +559,7 @@ class UserController extends BaseController
         'first_name_meta' => $user->getMeta('first_name'),
         'last_name_meta' => $user->getMeta('last_name'),
         'employee_id_meta' => $user->getMeta('employee_id'),
-        'position_meta' => $user->getMeta('position'),
+        'department_meta' => $user->getMeta('department'),
       ]);
       
       return response($user, 201);
@@ -645,7 +645,7 @@ class UserController extends BaseController
         'first_name' => $request->first_name,
         'last_name' => $request->last_name,
         'employee_id' => $request->employee_id,
-        'position' => $request->position,
+        'department' => $request->department,
       ]);
 
       $upData = [
@@ -669,8 +669,8 @@ class UserController extends BaseController
       if(isset($request->employee_id))
         $meta_details['employee_id'] = $request->employee_id;
       
-      if(isset($request->position))
-        $meta_details['position'] = $request->position;
+      if(isset($request->department))
+        $meta_details['department'] = $request->department;
     
       if (isset($request->can_view_all)) {
         $meta_details['can_view_all'] = $request->boolean('can_view_all') ? '1' : '0';
@@ -707,7 +707,7 @@ class UserController extends BaseController
         'first_name_meta' => $user->getMeta('first_name'),
         'last_name_meta' => $user->getMeta('last_name'),
         'employee_id_meta' => $user->getMeta('employee_id'),
-        'position_meta' => $user->getMeta('position'),
+        'department_meta' => $user->getMeta('department'),
       ]);
 
       return response($user, 201);
@@ -1110,7 +1110,7 @@ class UserController extends BaseController
           'first_name',
           'last_name',
           'employee_id',
-          'position',
+          'department',
           'division',
           'project_name',
           'start_date',
@@ -1179,7 +1179,7 @@ class UserController extends BaseController
           $rowData = [
             'last_name' => trim((string) $worksheet->getCellByColumnAndRow(2, $rowNumber)->getFormattedValue()),
             'first_name' => trim((string) $worksheet->getCellByColumnAndRow(3, $rowNumber)->getFormattedValue()),
-            'position' => trim((string) $worksheet->getCellByColumnAndRow(4, $rowNumber)->getFormattedValue()),
+            'department' => trim((string) $worksheet->getCellByColumnAndRow(4, $rowNumber)->getFormattedValue()),
             'division' => trim((string) $worksheet->getCellByColumnAndRow(5, $rowNumber)->getFormattedValue()),
             'project_name' => trim((string) $worksheet->getCellByColumnAndRow(6, $rowNumber)->getFormattedValue()),
             'start_date' => is_numeric($rawStartDate) ? ExcelDate::excelToDateTimeObject($rawStartDate)->format('Y-m-d') : trim((string) $startDateCell->getFormattedValue()),
@@ -1227,7 +1227,7 @@ class UserController extends BaseController
           'first name' => 'first_name',
           'last name' => 'last_name',
           'employee id' => 'employee_id',
-          'position' => 'position',
+          'department' => 'department',
           'status' => 'user_status',
           'role' => 'role_name',
           'role name' => 'role_name',

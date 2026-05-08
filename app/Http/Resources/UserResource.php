@@ -68,7 +68,7 @@ class UserResource extends JsonResource
       'last_name' => $this->user_details['last_name'] ?? null,
       'nickname' => $this->user_details['nickname'] ?? null,
       'employee_id' => $this->user_details['employee_id'] ?? null,
-      'position' => $this->user_details['position'] ?? null,
+      'department' => $this->user_details['department'] ?? null,
       'mobile_number' => $this->user_details['mobile_number'] ?? null,
       'contact_number' => $this->user_details['contact_number'] ?? null,
       'biography' => $this->user_details['biography'] ?? null,
