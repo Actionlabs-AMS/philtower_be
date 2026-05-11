@@ -7,7 +7,6 @@ use App\Models\Department;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Requests\DepartmentRequest;
-use App\Http\Resources\DepartmentResource;
 use App\Services\DepartmentService;
 use App\Services\MessageService;
 
@@ -59,7 +58,13 @@ class DepartmentController extends BaseController
    */
   public function index()
   {
-    return parent::index();
+        try {
+            $perPage = (int) request('per_page', 10);
+            $trash = (bool) request('trash', false);
+            return $this->service->list($perPage, $trash, request()->user());
+        } catch (\Throwable $e) {
+            return $this->messageService->responseError($e);
+        }
   }
 
   /**
@@ -102,7 +107,12 @@ class DepartmentController extends BaseController
    */
   public function show($id)
   {
-    return parent::show($id);
+    try {
+        $item = $this->service->show((int) $id);
+        return response()->json(['data' => $item]);
+    } catch (\Exception $e) {
+        return $this->messageService->responseError($e);
+    }
   }
 
   /**
@@ -440,13 +450,13 @@ class DepartmentController extends BaseController
    */
   public function store(DepartmentRequest $request)
   {
-    // try {
-      $data = $request->all();
-      $department = $this->service->store($data);
-      return response($department, 201);
-    // } catch (\Exception $e) {
-    //   return $this->messageService->responseError();
-    // }
+    try {
+        $data = $request->validated();
+        $resource = $this->service->store($data);
+        return response($resource, 201);
+    } catch (\Exception $e) {
+        return $this->messageService->responseError($e);
+    }
   }
 
   /**
@@ -506,12 +516,12 @@ class DepartmentController extends BaseController
    */
   public function update(DepartmentRequest $request, int $id)
   {
-    // try {
-      $data = $request->all();
-      $department = $this->service->update($data, $id);
-      return response($department, 201);
-    // } catch (\Exception $e) {
-    //   return $this->messageService->responseError();
-    // }
+    try {
+        $data = $request->validated();
+        $resource = $this->service->update($data, (int) $id);
+        return response($resource, 200);
+    } catch (\Exception $e) {
+        return $this->messageService->responseError($e);
+    }
   }
 }

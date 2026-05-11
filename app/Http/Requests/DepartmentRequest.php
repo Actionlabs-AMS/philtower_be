@@ -26,7 +26,13 @@ class DepartmentRequest extends FormRequest
                 'string',
                 'max:255',
                 "regex:/^[a-zA-Z0-9,&-_\s]+$/",
-                Rule::unique('departments', 'name')
+                Rule::unique('departments')
+                    ->where(function ($query) {
+                        return $query
+                        ->where('name', $this->name)
+                        ->where('code', $this->code);
+                    })
+                    ->ignore($this->id),
             ],
 
             'code' => [
@@ -34,7 +40,13 @@ class DepartmentRequest extends FormRequest
                 'string',
                 'max:100',
                 "regex:/^[a-zA-Z0-9,&-_\s]+$/",
-                Rule::unique('departments', 'code')
+                Rule::unique('departments')
+                    ->where(function ($query) {
+                        return $query
+                        ->where('name', $this->name)
+                        ->where('code', $this->code);
+                    })
+                    ->ignore($this->id),
             ],
 
             'descriptions' => [

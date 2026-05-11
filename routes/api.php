@@ -160,24 +160,20 @@ Route::middleware('auth:sanctum')->group(function () {
 	*/
 
 	Route::prefix('departments')->group(function () {
-		// Standard CRUD operations
-		Route::get('/', [DepartmentController::class, 'index']);  // Retrieve all categories
-		Route::get('/{id}', [DepartmentController::class, 'show']);  // Retrieve a single category
-		Route::post('/', [DepartmentController::class, 'store']);  // Create a new category
-		Route::put('/{id}', [DepartmentController::class, 'update']);  // Update an existing category
-		Route::delete('/{id}', [DepartmentController::class, 'destroy']);  // Delete a category
-		
-		// Bulk operations
-		Route::post('/bulk/delete', [DepartmentController::class, 'bulkDelete']);  // Bulk delete categories
-		Route::post('/bulk/restore', [DepartmentController::class, 'bulkRestore']);  // Bulk restore categories
-		Route::post('/bulk/force-delete', [DepartmentController::class, 'bulkForceDelete']);  // Bulk permanently delete categories
-
-		// Additional category management routes
-		Route::prefix('archived/')->group(function () {
-			Route::get('/', [DepartmentController::class, 'getTrashed']); // Retrieve soft-deleted categories
-			Route::patch('/restore/{id}', [DepartmentController::class, 'restore']); // Restore a soft-deleted category
-			Route::delete('/{id}', [DepartmentController::class, 'forceDelete']); // Permanently delete a soft-deleted category
+		Route::prefix('archived')->group(function () {
+			Route::get('/', [DepartmentController::class, 'getTrashed']);
+			Route::patch('/restore/{id}', [DepartmentController::class, 'restore']);
+			Route::delete('/{id}', [DepartmentController::class, 'forceDelete']);
 		});
+
+		// Standard CRUD
+		Route::get('/', [DepartmentController::class, 'index']);
+		Route::post('/', [DepartmentController::class, 'store']);
+		Route::put('/{id}', [DepartmentController::class, 'update']);
+		Route::delete('/{id}', [DepartmentController::class, 'destroy']);
+
+		// KEEP THIS LAST
+		Route::get('/{id}', [DepartmentController::class, 'show']);
 	});
 
 	

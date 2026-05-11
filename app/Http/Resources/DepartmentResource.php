@@ -21,11 +21,9 @@ class DepartmentResource extends JsonResource
 
             'active' => $this->active,
 
-            // frontend-friendly field (for dropdowns, selects, etc.)
-            'label' => $this->name,
-
-            'created_at' => $this->created_at?->toDateTimeString(),
-            'updated_at' => $this->updated_at?->toDateTimeString(),
+            'created_at' => $this->updated_at->format('Y-m-d H:i:s'),
+            'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
+            'deleted_at' => ($this->deleted_at) ? $this->deleted_at->format('Y-m-d H:i:s') : null
         ];
     }
 }

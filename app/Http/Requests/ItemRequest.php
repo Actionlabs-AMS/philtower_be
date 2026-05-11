@@ -20,16 +20,36 @@ class ItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "name" => "required|string|max:255",
-            "code" => "required|string|max:50",
-            "description" => "nullable|string|max:500",
+            "name" => ["required", 
+                        "string", 
+                        "max:255",
+                        Rule::unique('items')
+                            ->where(function ($query) {
+                                return $query
+                                ->where('name', $this->name)
+                                ->where('code', $this->code);
+                            })
+                            ->ignore($this->id),
+                        ],
+            "code" => ["required", 
+                        "string", 
+                        "max:50",
+                        Rule::unique('items')
+                            ->where(function ($query) {
+                                return $query
+                                ->where('name', $this->name)
+                                ->where('code', $this->code);
+                            })
+                            ->ignore($this->id),
+                        ],
+            "description" => ["nullable", "string", "max:500"],
 
-            "active" => "nullable|boolean",
-            "approval" => "nullable|boolean",
+            "active" => ["nullable", "boolean"],
+            "approval" => ["nullable", "boolean"],
 
             // multi-select subcategories (stored as array or JSON)
-            "subcategory_id" => "nullable|array",
-            "subcategory_id.*" => "integer",
+            "subcategory_id" => ["nullable", "array"],
+            "subcategory_id.*" => ["integer"],
 
         ];
     }
