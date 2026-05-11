@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Role;
+use App\Models\Department;
 use App\Helpers\PasswordHelper;
 
 class UserSeeder extends Seeder
@@ -21,15 +22,7 @@ class UserSeeder extends Seeder
         }
 
         // ✅ Department list
-        $departments = [
-            'IT',
-            'HR',
-            'Finance',
-            'Operations',
-            'Customer Support',
-            'Engineering',
-            'Admin'
-        ];
+        $departments = Department::all();
 
         // Create Super Admin
         $salt = PasswordHelper::generateSalt();
@@ -53,7 +46,7 @@ class UserSeeder extends Seeder
             'first_name' => 'System',
             'last_name' => 'Administrator',
             'nickname' => 'Admin',
-            'department' => 'IT', // fixed for admin
+            'department' => Department::where('code', 'IT')->value('id'),
         ]);
 
         $availableRoles = Role::where('name', '!=', 'Developer Account')->get();
@@ -99,14 +92,14 @@ class UserSeeder extends Seeder
             );
 
             // ✅ Random department
-            $department = $departments[array_rand($departments)];
+            $department = $departments->random();
 
             // ✅ Save meta INCLUDING department
             $user->saveUserMeta([
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'nickname' => $firstName,
-                'department' => $department,
+                'department' => (string) $department->id,
             ]);
         }
 

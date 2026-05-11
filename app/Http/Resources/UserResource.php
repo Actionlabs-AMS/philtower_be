@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\User;
+use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -59,6 +60,12 @@ class UserResource extends JsonResource
         $approverName = $fullName !== '' ? $fullName : ($approver->user_login ?? null);
       }
     }
+
+    $departmentId = $this->user_details['department'] ?? null;
+    $department = null;
+    if (!empty($departmentId)) {
+        $department = Department::find((int) $departmentId);
+    }
     
     return [
       'id' => $this->id,
@@ -68,7 +75,8 @@ class UserResource extends JsonResource
       'last_name' => $this->user_details['last_name'] ?? null,
       'nickname' => $this->user_details['nickname'] ?? null,
       'employee_id' => $this->user_details['employee_id'] ?? null,
-      'department' => $this->user_details['department'] ?? null,
+      'department_id' => $this->user_details['department'] ?? null,
+      'department_name' => $department ? $department->name : null,
       'mobile_number' => $this->user_details['mobile_number'] ?? null,
       'contact_number' => $this->user_details['contact_number'] ?? null,
       'biography' => $this->user_details['biography'] ?? null,
