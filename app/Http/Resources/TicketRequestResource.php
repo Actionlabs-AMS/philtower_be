@@ -30,6 +30,8 @@ class TicketRequestResource extends JsonResource
             'contact_name' => $this->contact_name,
             'contact_email' => $this->contact_email,
             'location' => $this->location,
+            'department' => $this->department,
+            'division' => $this->department,
             'ticket_status_id' => $this->ticket_status_id,
             'slas_id' => $this->slas_id,
             'ticket_priority_id' => $this->ticket_priority_id,

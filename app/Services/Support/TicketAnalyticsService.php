@@ -144,6 +144,7 @@ class TicketAnalyticsService
                 'contact_name' => $t->contact_name,
                 'contact_email' => $t->contact_email,
                 'contact_number' => $t->contact_number,
+                'division' => $t->department,
                 'ticket_status_id' => $t->ticket_status_id,
                 'status_code' => $t->ticketStatus?->code,
                 'status_label' => $t->ticketStatus?->label,
