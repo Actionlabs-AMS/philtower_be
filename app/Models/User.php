@@ -142,6 +142,11 @@ class User extends Authenticatable
 		return Role::find($role_id);
 	}
 
+	public function getDepartment($department_id)
+	{   
+		return Department::find($department_id);
+	}
+
 	/****************************************
 	*           ATTRIBUTES PARTS            *
 	****************************************/

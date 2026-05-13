@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\UserReportsController;
 use App\Http\Controllers\Api\ContentReportsController;
 use App\Http\Controllers\Api\AuditTrailController;
 use App\Http\Controllers\Api\TicketPriorityController;
+use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\Support\ServiceTypeController;
 use App\Http\Controllers\Api\Support\TicketStatusController;
 use App\Http\Controllers\Api\Support\SlaController;
@@ -148,6 +149,31 @@ Route::middleware('auth:sanctum')->group(function () {
 			Route::put('/{id}', [ItemController::class, 'update']);
 			Route::delete('/{id}', [ItemController::class, 'destroy']);
 		});
+	});
+
+
+	/*
+	|--------------------------------------------------------------------------
+	| Department Routes
+	|--------------------------------------------------------------------------
+	|
+	*/
+
+	Route::prefix('departments')->group(function () {
+		Route::prefix('archived')->group(function () {
+			Route::get('/', [DepartmentController::class, 'getTrashed']);
+			Route::patch('/restore/{id}', [DepartmentController::class, 'restore']);
+			Route::delete('/{id}', [DepartmentController::class, 'forceDelete']);
+		});
+
+		// Standard CRUD
+		Route::get('/', [DepartmentController::class, 'index']);
+		Route::post('/', [DepartmentController::class, 'store']);
+		Route::put('/{id}', [DepartmentController::class, 'update']);
+		Route::delete('/{id}', [DepartmentController::class, 'destroy']);
+
+		// KEEP THIS LAST
+		Route::get('/{id}', [DepartmentController::class, 'show']);
 	});
 
 	

@@ -27,6 +27,8 @@ class TicketRequest extends Model
         'contact_number',
         'contact_name',
         'contact_email',
+        'department',
+        'location',
         'ticket_status_id',
         'slas_id',
         'ticket_priority_id',

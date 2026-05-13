@@ -41,9 +41,6 @@ return new class extends Migration
 
             // ❌ drop columns
             $table->dropColumn(['category_id', 'subcategory_id', 'item_id']);
-
-            // ➕ restore old column
-            $table->unsignedBigInteger('parent_ticket_id')->nullable();
         });
     }
 };

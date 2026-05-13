@@ -16,6 +16,7 @@ class ItemController extends BaseController
     public function __construct(ItemService $service, MessageService $messageService)
     {
         $this->service = $service;
+        $this->messageService = $messageService;
     }
 
     public function index()

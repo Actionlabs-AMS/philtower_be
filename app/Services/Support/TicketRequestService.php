@@ -253,6 +253,7 @@ class TicketRequestService extends BaseService
                 $q->where('request_number', 'like', '%' . $search . '%')
                     ->orWhere('contact_name', 'like', '%' . $search . '%')
                     ->orWhere('contact_email', 'like', '%' . $search . '%')
+                    ->orWhere('location', 'like', '%' . $search . '%')
                     ->orWhere('description', 'like', '%' . $search . '%');
             });
         }
@@ -324,6 +325,7 @@ class TicketRequestService extends BaseService
             'request_number' => 'ticket_requests.request_number',
             'contact_name' => 'ticket_requests.contact_name',
             'contact_email' => 'ticket_requests.contact_email',
+            'location' => 'ticket_requests.location',
             'for_approval' => 'ticket_requests.for_approval',
             'created_at' => 'ticket_requests.created_at',
             'created_at_human' => 'ticket_requests.created_at',
@@ -566,6 +568,7 @@ class TicketRequestService extends BaseService
                 $q->where('request_number', 'like', '%' . $search . '%')
                     ->orWhere('contact_name', 'like', '%' . $search . '%')
                     ->orWhere('contact_email', 'like', '%' . $search . '%')
+                    ->orWhere('location', 'like', '%' . $search . '%')
                     ->orWhere('description', 'like', '%' . $search . '%');
             });
         }
@@ -583,6 +586,7 @@ class TicketRequestService extends BaseService
             'request_number' => 'ticket_requests.request_number',
             'contact_name' => 'ticket_requests.contact_name',
             'contact_email' => 'ticket_requests.contact_email',
+            'location' => 'ticket_requests.location',
             'created_at' => 'ticket_requests.created_at',
             'updated_at' => 'ticket_requests.updated_at',
             'service_type_name' => 'service_types.name',
