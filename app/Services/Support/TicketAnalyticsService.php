@@ -2,6 +2,7 @@
 
 namespace App\Services\Support;
 
+use App\Models\Department;
 use App\Models\Support\TicketRequest;
 use App\Models\Support\TicketStatus;
 use App\Models\User;
@@ -119,6 +120,8 @@ class TicketAnalyticsService
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $departmentByNormalizedName = $this->departmentCatalogByNormalizedName();
+
         $rows = [];
         foreach ($tickets as $t) {
             $clock = $t->slaClocks->first();
@@ -126,6 +129,9 @@ class TicketAnalyticsService
             $category = $t->category;
             $subcategory = $t->subcategory;
             $item = $t->item;
+            $divisionLabel = $t->department;
+            $matched = $departmentByNormalizedName[$this->normalizeDepartmentKey((string) $divisionLabel)] ?? null;
+            $divisionCode = $matched['code'] ?? null;
             $rows[] = [
                 'id' => $t->id,
                 'request_number' => $t->request_number,
@@ -144,7 +150,16 @@ class TicketAnalyticsService
                 'contact_name' => $t->contact_name,
                 'contact_email' => $t->contact_email,
                 'contact_number' => $t->contact_number,
-                'division' => $t->department,
+                'division' => $divisionLabel,
+                'division_code' => $divisionCode,
+                'department_code' => $divisionCode,
+                'department' => $matched
+                    ? [
+                        'id' => $matched['id'],
+                        'code' => $matched['code'],
+                        'name' => $matched['name'],
+                    ]
+                    : null,
                 'ticket_status_id' => $t->ticket_status_id,
                 'status_code' => $t->ticketStatus?->code,
                 'status_label' => $t->ticketStatus?->label,
@@ -170,6 +185,43 @@ class TicketAnalyticsService
             ];
         }
         return $rows;
+    }
+
+    /**
+     * Map trim(lower(department.name)) → catalog row for resolving ticket_requests.department text.
+     * Active departments win over soft-deleted when names collide.
+     *
+     * @return array<string, array{id: int, code: string, name: string}>
+     */
+    private function departmentCatalogByNormalizedName(): array
+    {
+        $departments = Department::withTrashed()
+            ->orderByRaw('deleted_at IS NULL DESC')
+            ->orderBy('id', 'asc')
+            ->get(['id', 'name', 'code', 'deleted_at']);
+
+        $map = [];
+        foreach ($departments as $d) {
+            $key = $this->normalizeDepartmentKey((string) $d->name);
+            if ($key === '') {
+                continue;
+            }
+            if (! isset($map[$key])) {
+                $code = trim((string) $d->code);
+                $map[$key] = [
+                    'id' => (int) $d->id,
+                    'code' => $code,
+                    'name' => trim((string) $d->name),
+                ];
+            }
+        }
+
+        return $map;
+    }
+
+    private function normalizeDepartmentKey(string $value): string
+    {
+        return mb_strtolower(trim($value));
     }
 
     /**
