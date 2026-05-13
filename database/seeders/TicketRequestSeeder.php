@@ -147,7 +147,7 @@ class TicketRequestSeeder extends Seeder
 
                 'ticket_status_id' => $statusRow->id,
                 'slas_id' => $sla->id,
-                'ticket_priority_id' => ($i % 4) + 1,
+                'ticket_priority_id' => [1, 2, 4][$i % 3],
 
                 'for_approval' => [
                     TicketRequest::FOR_APPROVAL_AUTO,

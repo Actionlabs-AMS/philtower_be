@@ -12,7 +12,6 @@ class TicketPrioritySeeder extends Seeder
         $rows = [
             ['id' => 1, 'label' => 'Critical', 'level' => 1.0],
             ['id' => 2, 'label' => 'High', 'level' => 2.0],
-            ['id' => 3, 'label' => 'Mid', 'level' => 3.0],
             ['id' => 4, 'label' => 'Low', 'level' => 4.0],
         ];
 
